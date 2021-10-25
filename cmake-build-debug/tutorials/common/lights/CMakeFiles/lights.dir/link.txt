@@ -1,2 +1,0 @@
-/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ar qc ../../../liblights.a CMakeFiles/lights.dir/light.cpp.o CMakeFiles/lights.dir/ambient_light.cpp.o CMakeFiles/lights.dir/directional_light.cpp.o CMakeFiles/lights.dir/point_light.cpp.o CMakeFiles/lights.dir/quad_light.cpp.o CMakeFiles/lights.dir/spot_light.cpp.o
-/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib ../../../liblights.a

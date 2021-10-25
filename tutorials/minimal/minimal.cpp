@@ -3,15 +3,20 @@
 
 #include <embree3/rtcore.h>
 #include <stdio.h>
+#include <iostream>
 #include <math.h>
 #include <limits>
 #include <stdio.h>
 #include <FreeImage.h>
+#include "readfile.h"
+
 
 #if defined(_WIN32)
 #  include <conio.h>
 #  include <windows.h>
 #endif
+
+std::string BASE_PATH = "../tutorials/minimal/";
 
 /*
  * A minimal tutorial. 
@@ -96,28 +101,46 @@ RTCScene initializeScene(RTCDevice device)
    * to ensure proper alignment and padding. This is described in
    * more detail in the API documentation.
    */
+  ObjMesh objMesh = readObjFile(string(BASE_PATH + "data/floor.obj").c_str());
+
+
   RTCGeometry geom = rtcNewGeometry(device, RTC_GEOMETRY_TYPE_TRIANGLE);
   float* vertices = (float*) rtcSetNewGeometryBuffer(geom,
                                                      RTC_BUFFER_TYPE_VERTEX,
                                                      0,
                                                      RTC_FORMAT_FLOAT3,
                                                      3*sizeof(float),
-                                                     3);
+                                                     objMesh.vertex[0].size()*objMesh.vertex.size()
+                                                     );
 
   unsigned* indices = (unsigned*) rtcSetNewGeometryBuffer(geom,
                                                           RTC_BUFFER_TYPE_INDEX,
                                                           0,
                                                           RTC_FORMAT_UINT3,
                                                           3*sizeof(unsigned),
-                                                          1);
+                                                          objMesh.vertindex[0].size()*objMesh.vertindex.size()
+                                                          );
 
   if (vertices && indices)
   {
-    vertices[0] = 0.f; vertices[1] = 0.f; vertices[2] = 0.f;
+    unsigned stride = objMesh.vertex[0].size();
+    for (int i = 0; i < objMesh.vertex.size(); ++i) {
+      for (int j = 0; j < objMesh.vertex[0].size(); ++j) {
+        vertices[i*stride + j] = objMesh.vertex[i][j];
+      }
+    }
+    stride = objMesh.vertindex[0].size();
+    for (int i = 0; i < objMesh.vertindex.size(); ++i) {
+      for (int j = 0; j < objMesh.vertindex[0].size(); ++j) {
+        indices[i*stride + j] = (unsigned)objMesh.vertindex[i][j];
+      }
+    }
+
+/*    vertices[0] = 0.f; vertices[1] = 0.f; vertices[2] = 0.f;
     vertices[3] = 1.f; vertices[4] = 0.f; vertices[5] = 0.f;
     vertices[6] = 0.f; vertices[7] = 1.f; vertices[8] = 0.f;
 
-    indices[0] = 0; indices[1] = 1; indices[2] = 2;
+    indices[0] = 0; indices[1] = 1; indices[2] = 2;*/
   }
 
   /*
@@ -215,13 +238,14 @@ int main()
   /* Initialization. All of this may fail, but we will be notified by
    * our errorFunction. */
   RTCDevice device = initializeDevice();
+
   RTCScene scene = initializeScene(device);
 
   /* This will hit the triangle at t=1. */
-  castRay(scene, 0, 0, -1, 0, 0, 1);
+//  castRay(scene, 0, 0, -1, 0, 0, 1);
 
   /* This will not hit anything. */
-  castRay(scene, 1, 1, -1, 0, 0, 1);
+//  castRay(scene, 1, 1, -1, 0, 0, 1);
 
   /* Though not strictly necessary in this example, you should
    * always make sure to release resources allocated through Embree. */
@@ -229,8 +253,7 @@ int main()
   rtcReleaseDevice(device);
 
 
-
-  int h = 100, w = 100;
+/*  int h = 100, w = 100;
   BYTE image[h][w*3];
 
   for (int i = 0; i < h; ++i) {
@@ -243,12 +266,12 @@ int main()
   FreeImage_Initialise();
   FIBITMAP *img = FreeImage_ConvertFromRawBits(&(image[0][0]), w, h, w * 3, 24, 0xFF0000, 0x00FF00, 0x0000FF, false);
 
-  if (FreeImage_Save(FIF_PNG, img, "image.png", 0)) {
+  if (FreeImage_Save(FIF_PNG, img, "../tutorials/minimal/image.png", 0)) {
     printf("Image saved successfully!");
   }
 
 
-  FreeImage_DeInitialise();
+  FreeImage_DeInitialise();*/
 
 
   return 0;

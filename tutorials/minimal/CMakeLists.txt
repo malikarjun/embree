@@ -1,11 +1,12 @@
 ## Copyright 2009-2021 Intel Corporation
 ## SPDX-License-Identifier: Apache-2.0
 
-ADD_EXECUTABLE(minimal ../../kernels/embree.rc minimal.cpp)
+ADD_EXECUTABLE(minimal ../../kernels/embree.rc minimal.cpp readfile.cpp helper.cpp)
 TARGET_LINK_DIRECTORIES(minimal PRIVATE ./lib)
 TARGET_LINK_LIBRARIES(minimal embree)
 TARGET_LINK_LIBRARIES(minimal freeimage)
-TARGET_INCLUDE_DIRECTORIES(minimal PRIVATE ${PROJECT_SOURCE_DIR}/include PRIVATE ./include)
+TARGET_INCLUDE_DIRECTORIES(minimal PRIVATE ${PROJECT_SOURCE_DIR}/include
+        PRIVATE ./include PRIVATE ../../common)
 
 SET_PROPERTY(TARGET minimal PROPERTY FOLDER tutorials/single)
 SET_PROPERTY(TARGET minimal APPEND PROPERTY COMPILE_FLAGS " ${FLAGS_LOWEST}")
