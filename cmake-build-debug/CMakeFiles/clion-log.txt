@@ -1,17 +1,4 @@
 /Applications/CLion.app/Contents/bin/cmake/mac/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_DEPENDS_USE_COMPILER=FALSE -G "CodeBlocks - Unix Makefiles" /Users/mallikarjunswamy/apps/embree
--- The C compiler identification is AppleClang 13.0.0.13000029
--- The CXX compiler identification is AppleClang 13.0.0.13000029
--- Detecting C compiler ABI info
--- Detecting C compiler ABI info - done
--- Check for working C compiler: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc - skipped
--- Detecting C compile features
--- Detecting C compile features - done
--- Detecting CXX compiler ABI info
--- Detecting CXX compiler ABI info - done
--- Check for working CXX compiler: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++ - skipped
--- Detecting CXX compile features
--- Detecting CXX compile features - done
--- Found Git: /usr/bin/git (found version "2.30.1 (Apple Git-130)") 
 CMake Deprecation Warning at CMakeLists.txt:64 (cmake_policy):
   The OLD behavior for policy CMP0072 will be removed from a future version
   of CMake.
@@ -22,19 +9,9 @@ CMake Deprecation Warning at CMakeLists.txt:64 (cmake_policy):
   behavior and not rely on setting a policy to OLD.
 
 
--- Found Intel SPMD Compiler (ISPC): /opt/homebrew/bin/ispc
--- Looking for pthread.h
--- Looking for pthread.h - found
--- Performing Test CMAKE_HAVE_LIBC_PTHREAD
--- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
--- Found Threads: TRUE  
 -- Could NOT find TBB (missing: TBB_DIR)
 -- Looking for TBB components tbb; ()
 -- Found TBB version 2020.3 at /opt/local
--- Found OpenImageIO: /opt/homebrew/include  
--- Found JPEG: /opt/homebrew/lib/libjpeg.dylib (found version "90") 
--- Found PNG: /opt/homebrew/include  
--- Found OpenGL: /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.3.sdk/System/Library/Frameworks/OpenGL.framework   
 -- Configuring done
 -- Generating done
 -- Build files have been written to: /Users/mallikarjunswamy/apps/embree/cmake-build-debug

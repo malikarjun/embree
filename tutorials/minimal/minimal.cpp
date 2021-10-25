@@ -6,6 +6,7 @@
 #include <math.h>
 #include <limits>
 #include <stdio.h>
+#include <FreeImage.h>
 
 #if defined(_WIN32)
 #  include <conio.h>
@@ -206,27 +207,6 @@ void castRay(RTCScene scene,
     printf("Did not find any intersection.\n");
 }
 
-void waitForKeyPressedUnderWindows()
-{
-#if defined(_WIN32)
-  HANDLE hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-  
-  CONSOLE_SCREEN_BUFFER_INFO csbi;
-  if (!GetConsoleScreenBufferInfo(hStdOutput, &csbi)) {
-    printf("GetConsoleScreenBufferInfo failed: %d\n", GetLastError());
-    return;
-  }
-  
-  /* do not pause when running on a shell */
-  if (csbi.dwCursorPosition.X != 0 || csbi.dwCursorPosition.Y != 0)
-    return;
-  
-  /* only pause if running in separate console window. */
-  printf("\n\tPress any key to exit...\n");
-  int ch = getch();
-#endif
-}
-
 
 /* -------------------------------------------------------------------------- */
 
@@ -247,10 +227,30 @@ int main()
    * always make sure to release resources allocated through Embree. */
   rtcReleaseScene(scene);
   rtcReleaseDevice(device);
-  
-  /* wait for user input under Windows when opened in separate window */
-  waitForKeyPressedUnderWindows();
-  
+
+
+
+  int h = 100, w = 100;
+  BYTE image[h][w*3];
+
+  for (int i = 0; i < h; ++i) {
+    for (int j = 0; j < w; ++j) {
+      image[i][j*3+0] = 0;
+      image[i][j*3+1] = 0;
+      image[i][j*3+2] = 255;
+    }
+  }
+  FreeImage_Initialise();
+  FIBITMAP *img = FreeImage_ConvertFromRawBits(&(image[0][0]), w, h, w * 3, 24, 0xFF0000, 0x00FF00, 0x0000FF, false);
+
+  if (FreeImage_Save(FIF_PNG, img, "image.png", 0)) {
+    printf("Image saved successfully!");
+  }
+
+
+  FreeImage_DeInitialise();
+
+
   return 0;
 }
 

@@ -45,6 +45,9 @@ if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xexamplesx" OR NOT CMAKE_INSTALL_COM
       -change "@rpath/libembree3.3.dylib" "/usr/local/lib/libembree3.3.dylib"
       "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/bin/minimal")
     execute_process(COMMAND /usr/bin/install_name_tool
+      -delete_rpath "/Users/mallikarjunswamy/apps/embree/tutorials/minimal/./lib"
+      "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/bin/minimal")
+    execute_process(COMMAND /usr/bin/install_name_tool
       -delete_rpath "/Users/mallikarjunswamy/apps/embree/cmake-build-debug"
       "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/bin/minimal")
     execute_process(COMMAND /usr/bin/install_name_tool

@@ -2637,6 +2637,7 @@
 					<Add option="-DUSE_GLFW"/>
 					<Add directory="/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.3.sdk/System/Library/Frameworks/OpenGL.framework"/>
 					<Add directory="/Users/mallikarjunswamy/apps/embree/include"/>
+					<Add directory="/Users/mallikarjunswamy/apps/embree/tutorials/minimal/./include"/>
 					<Add directory="/Users/mallikarjunswamy/apps/embree/kernels/../include"/>
 					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1"/>
 					<Add directory="/usr/local/include"/>
@@ -2664,6 +2665,7 @@
 					<Add option="-DUSE_GLFW"/>
 					<Add directory="/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.3.sdk/System/Library/Frameworks/OpenGL.framework"/>
 					<Add directory="/Users/mallikarjunswamy/apps/embree/include"/>
+					<Add directory="/Users/mallikarjunswamy/apps/embree/tutorials/minimal/./include"/>
 					<Add directory="/Users/mallikarjunswamy/apps/embree/kernels/../include"/>
 					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1"/>
 					<Add directory="/usr/local/include"/>
