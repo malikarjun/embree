@@ -90,4 +90,17 @@ extern "C" void* QuadLight_create()
   return self;
 }
 
+  Light_EvalRes QuadLight_eval(const Light* super,
+                                  const DifferentialGeometry& dg,
+                                  const Vec3fa& dir)
+  {
+    QuadLight* self = (QuadLight*)super;
+    Light_EvalRes res;
+
+    res.value = self->radiance;
+
+    return res;
+  }
+
+
 } // namespace embree

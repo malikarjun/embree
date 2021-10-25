@@ -1,0 +1,5 @@
+/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/common/image/CMakeFiles/rebuild_cache.dir
+/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/common/image/CMakeFiles/edit_cache.dir
+/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/common/image/CMakeFiles/image.dir

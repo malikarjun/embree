@@ -34,7 +34,9 @@ namespace embree
     {
       /* load default scene if none specified */
       if (scene->size() == 0 && sceneFilename.size() == 0) {
-        FileName file = FileName::executableFolder() + FileName("models/cornell_box.ecs");
+//        FileName file = FileName::executableFolder() + FileName("models/cornell_box.ecs");
+
+        FileName file = FileName::executableFolder() + FileName("models/cornell_box_quadlight.ecs");
         parseCommandLine(new ParseStream(new LineCommentFilter(file, "#")), file.path());
       }
     }

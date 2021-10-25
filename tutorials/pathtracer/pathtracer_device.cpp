@@ -1580,7 +1580,8 @@ Vec3fa renderPixelFunction(float x, float y, RandomSampler& sampler, const ISPCC
                      Vec3fa(normalize(x*camera.xfm.l.vx + y*camera.xfm.l.vy + camera.xfm.l.vz)),0.0f,inf,time);
 
   DifferentialGeometry dg;
- 
+
+  g_max_path_length = 1;
   /* iterative path tracer loop */
   for (int i=0; i<g_max_path_length; i++)
   {
@@ -1648,16 +1649,27 @@ Vec3fa renderPixelFunction(float x, float y, RandomSampler& sampler, const ISPCC
     for (unsigned int i=0; i<g_ispc_scene->numLights; i++)
     {
       const Light* l = g_ispc_scene->lights[i];
-      Light_SampleRes ls = l->sample(l,dg,RandomSampler_get2D(sampler));
-      if (ls.pdf <= 0.0f) continue;
-      Vec3fa transparency = Vec3fa(1.0f);
-      Ray shadow(dg.P,ls.dir,dg.eps,ls.dist,time);
-      context.userRayExt = &transparency;
-      rtcOccluded1(g_scene,&context.context,RTCRay_(shadow));
-      RayStats_addShadowRay(stats);
-      //if (shadow.geomID != RTC_INVALID_GEOMETRY_ID) continue;
-      if (max(max(transparency.x,transparency.y),transparency.z) > 0.0f)
-        L = L + Lw*ls.weight*transparency*Material__eval(material_array,materialID,numMaterials,brdf,wo,dg,ls.dir);
+      int tspp = 10;
+      for (int j = 0; j < tspp; ++j) {
+        Light_SampleRes ls = l->sample(l,dg,RandomSampler_get2D(sampler));
+        if (ls.pdf <= 0.0f) continue;
+        Vec3fa transparency = Vec3fa(1.0f);
+        Ray shadow(dg.P,ls.dir,dg.eps,ls.dist,time);
+        context.userRayExt = &transparency;
+        rtcOccluded1(g_scene,&context.context,RTCRay_(shadow));
+        RayStats_addShadowRay(stats);
+
+        if (shadow.geomID == RTC_INVALID_GEOMETRY_ID) {
+
+        }
+
+
+//        if (shadow.geomID != RTC_INVALID_GEOMETRY_ID) continue;
+        if (max(max(transparency.x,transparency.y),transparency.z) > 0.0f) {
+          // TODO : should we divide or multiply by something to normalize it? Is this method unbiased?
+          L = L + Lw*ls.weight*transparency*Material__eval(material_array,materialID,numMaterials,brdf,wo,dg,ls.dir);
+        }
+      }
     }
 
     if (wi1.pdf <= 1E-4f /* 0.0f */) break;

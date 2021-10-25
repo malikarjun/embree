@@ -455,6 +455,15 @@ namespace embree
         scene->add(new SceneGraph::LightNode(new SceneGraph::PointLight(P,I)));
       }, "--pointlight x y z r g b: adds a point light at position xyz with intensity rgb");
 
+    registerOption("quadlight", [this] (Ref<ParseStream> cin, const FileName& path) {
+      const Vec3fa v0 = cin->getVec3fa();
+      const Vec3fa v1 = cin->getVec3fa();
+      const Vec3fa v2 = cin->getVec3fa();
+      const Vec3fa v3 = cin->getVec3fa();
+      const Vec3fa L = cin->getVec3fa();
+      scene->add(new SceneGraph::LightNode(new SceneGraph::QuadLight(v0, v1, v2, v3, L)));
+    }, "--quadlight v0x v0y v0z v1x v1y v1z v2x v2y v2z v3x v3y v3z r g b: adds a point light at position xyz with intensity rgb");
+
     registerOption("directionallight", [this] (Ref<ParseStream> cin, const FileName& path) {
         const Vec3fa D = cin->getVec3fa();
         const Vec3fa E = cin->getVec3fa();

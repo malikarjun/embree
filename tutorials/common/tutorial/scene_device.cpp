@@ -100,10 +100,22 @@ namespace embree
       break;
     }
     case SceneGraph::LIGHT_SPOT:
+    {
+      break;
+    }
     case SceneGraph::LIGHT_TRIANGLE:
+    {
+      break;
+    }
     case SceneGraph::LIGHT_QUAD:
     {
-      // FIXME: not implemented yet
+      Ref<SceneGraph::QuadLight> inQuad = in.dynamicCast<SceneGraph::QuadLight>();
+      out = QuadLight_create();
+      // TODO: why are we passing the fourth vertex of the quadrilateral if it is not being used?
+      Vec3fa edge0 = inQuad->v3 - inQuad->v0;
+      Vec3fa edge1 = inQuad->v1 - inQuad->v0;
+//      QuadLight_set(out, inQuad->v0,  edge0, edge1,  inQuad->L);
+      QuadLight_set(out, inQuad->v0,  edge0, edge1,  inQuad->L);
       break;
     }
     

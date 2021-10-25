@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="Project"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="clang"/>
+		<Option virtualFolders="CMake Files\;CMake Files\common\;CMake Files\common\image\;CMake Files\..\;CMake Files\..\..\;CMake Files\..\..\..\;CMake Files\..\..\..\..\;CMake Files\..\..\..\..\..\;CMake Files\..\..\..\..\..\opt\;CMake Files\..\..\..\..\..\opt\homebrew\;CMake Files\..\..\..\..\..\opt\homebrew\lib\;CMake Files\..\..\..\..\..\opt\homebrew\lib\cmake\;CMake Files\..\..\..\..\..\opt\homebrew\lib\cmake\OpenImageIO\;CMake Files\..\..\..\..\..\opt\homebrew\lib\cmake\Imath\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="rebuild_cache">
+				<Option working_dir="/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="edit_cache">
+				<Option working_dir="/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="image">
+				<Option output="/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/common/image/libimage.a" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/common/image"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="clang"/>
+				<Compiler>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/13.0.0/include"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/common/image/Makefile&quot;  VERBOSE=1 image"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/common/image/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/common/image/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/common/image/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="image/fast">
+				<Option output="/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/common/image/libimage.a" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/common/image"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="clang"/>
+				<Compiler>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/13.0.0/include"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/common/image/Makefile&quot;  VERBOSE=1 image/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/common/image/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/common/image/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/mallikarjunswamy/apps/embree/tutorials/cmake-build-debug/common/image/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/Users/mallikarjunswamy/apps/embree/tutorials/common/image/image.cpp">
+			<Option target="image"/>
+		</Unit>
+		<Unit filename="/Users/mallikarjunswamy/apps/embree/tutorials/common/image/image.h">
+			<Option target="image"/>
+		</Unit>
+		<Unit filename="/Users/mallikarjunswamy/apps/embree/tutorials/common/image/pfm.cpp">
+			<Option target="image"/>
+		</Unit>
+		<Unit filename="/Users/mallikarjunswamy/apps/embree/tutorials/common/image/png.cpp">
+			<Option target="image"/>
+		</Unit>
+		<Unit filename="/Users/mallikarjunswamy/apps/embree/tutorials/common/image/ppm.cpp">
+			<Option target="image"/>
+		</Unit>
+		<Unit filename="/Users/mallikarjunswamy/apps/embree/tutorials/common/image/tga.cpp">
+			<Option target="image"/>
+		</Unit>
+		<Unit filename="/Users/mallikarjunswamy/apps/embree/tutorials/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+		<Unit filename="/Users/mallikarjunswamy/apps/embree/tutorials/common/image/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\common\image\"/>
+		</Unit>
+		<Unit filename="/Users/mallikarjunswamy/apps/embree/tutorials/../../../../../opt/homebrew/lib/cmake/OpenImageIO/OpenImageIOConfig.cmake">
+			<Option virtualFolder="CMake Files\..\..\..\..\..\opt\homebrew\lib\cmake\OpenImageIO\"/>
+		</Unit>
+		<Unit filename="/Users/mallikarjunswamy/apps/embree/tutorials/../../../../../opt/homebrew/lib/cmake/OpenImageIO/OpenImageIOConfigVersion.cmake">
+			<Option virtualFolder="CMake Files\..\..\..\..\..\opt\homebrew\lib\cmake\OpenImageIO\"/>
+		</Unit>
+		<Unit filename="/Users/mallikarjunswamy/apps/embree/tutorials/../../../../../opt/homebrew/lib/cmake/OpenImageIO/OpenImageIOTargets-release.cmake">
+			<Option virtualFolder="CMake Files\..\..\..\..\..\opt\homebrew\lib\cmake\OpenImageIO\"/>
+		</Unit>
+		<Unit filename="/Users/mallikarjunswamy/apps/embree/tutorials/../../../../../opt/homebrew/lib/cmake/OpenImageIO/OpenImageIOTargets.cmake">
+			<Option virtualFolder="CMake Files\..\..\..\..\..\opt\homebrew\lib\cmake\OpenImageIO\"/>
+		</Unit>
+		<Unit filename="/Users/mallikarjunswamy/apps/embree/tutorials/../../../../../opt/homebrew/lib/cmake/Imath/ImathConfig.cmake">
+			<Option virtualFolder="CMake Files\..\..\..\..\..\opt\homebrew\lib\cmake\Imath\"/>
+		</Unit>
+		<Unit filename="/Users/mallikarjunswamy/apps/embree/tutorials/../../../../../opt/homebrew/lib/cmake/Imath/ImathConfigVersion.cmake">
+			<Option virtualFolder="CMake Files\..\..\..\..\..\opt\homebrew\lib\cmake\Imath\"/>
+		</Unit>
+		<Unit filename="/Users/mallikarjunswamy/apps/embree/tutorials/../../../../../opt/homebrew/lib/cmake/Imath/ImathTargets-release.cmake">
+			<Option virtualFolder="CMake Files\..\..\..\..\..\opt\homebrew\lib\cmake\Imath\"/>
+		</Unit>
+		<Unit filename="/Users/mallikarjunswamy/apps/embree/tutorials/../../../../../opt/homebrew/lib/cmake/Imath/ImathTargets.cmake">
+			<Option virtualFolder="CMake Files\..\..\..\..\..\opt\homebrew\lib\cmake\Imath\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>

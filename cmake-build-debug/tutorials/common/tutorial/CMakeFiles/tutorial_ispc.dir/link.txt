@@ -1,0 +1,2 @@
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ar qc ../../../libtutorial_ispc.a CMakeFiles/tutorial_ispc.dir/tutorial.cpp.o CMakeFiles/tutorial_ispc.dir/application.cpp.o CMakeFiles/tutorial_ispc.dir/scene.cpp.o CMakeFiles/tutorial_ispc.dir/scene_device.cpp.o CMakeFiles/tutorial_ispc.dir/tasksys.cpp.o tutorial_device.dev.o
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib ../../../libtutorial_ispc.a

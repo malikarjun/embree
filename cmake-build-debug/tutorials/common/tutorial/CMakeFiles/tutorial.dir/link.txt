@@ -1,0 +1,2 @@
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ar qc ../../../libtutorial.a CMakeFiles/tutorial.dir/tutorial.cpp.o CMakeFiles/tutorial.dir/application.cpp.o CMakeFiles/tutorial.dir/scene.cpp.o CMakeFiles/tutorial.dir/tutorial_device.cpp.o CMakeFiles/tutorial.dir/scene_device.cpp.o
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib ../../../libtutorial.a

@@ -1,0 +1,2 @@
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ar qc ../../../liblights_ispc.a light.dev.o ambient_light.dev.o directional_light.dev.o point_light.dev.o quad_light.dev.o spot_light.dev.o
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib ../../../liblights_ispc.a
