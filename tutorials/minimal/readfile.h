@@ -24,3 +24,7 @@ public:
 ObjMesh readObjFile (const char * filename);
 
 Camera readCameraFile(const char * filename);
+
+Light readLightFile(const char * filename);
+
+

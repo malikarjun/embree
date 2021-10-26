@@ -100,12 +100,46 @@ Camera readCameraFile (const char * filename) {
       } else if (cmd == "up") {
         camera.up = vectToVec3f(readValues(s));
       } else if (cmd == "fovy") {
-        camera.fovy = degToRadian(readValues(s)[0]);
+        camera.setFovy(readValues(s)[0]);
+      } else if (cmd == "size") {
+        vector<float> vec = readValues(s);
+        camera.width = vec[0], camera.height = vec[1];
       }
       getline (in, str);
     }
   }
+  camera.setUpCameraCoordFrame();
   return camera;
+}
+
+Light readLightFile (const char * filename) {
+  Light light;
+  ifstream in;
+  in.open(filename);
+  if (in.is_open()) {
+
+    string str, cmd;
+    getline (in, str);
+    while (in) {
+      if (!((str.find_first_not_of(" \t\r\n") != string::npos) && (str[0] != '#'))) {
+        getline (in, str);
+        continue;
+      }
+      stringstream s(str);
+      s >> cmd;
+      if (cmd == "a" ) {
+        light.point = vectToVec3f(readValues(s));
+      } else if (cmd == "b" )  {
+        light.setEdge1(light.point, vectToVec3f(readValues(s)));
+      } else if (cmd == "b" )  {
+        light.setEdge2(light.point, vectToVec3f(readValues(s)));
+      } else if (cmd == "i" )  {
+        light.I = vectToVec3f(readValues(s));
+      }
+      getline (in, str);
+    }
+  }
+  return light;
 }
 
 

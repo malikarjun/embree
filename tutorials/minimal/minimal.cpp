@@ -101,7 +101,7 @@ RTCScene initializeScene(RTCDevice device)
    * to ensure proper alignment and padding. This is described in
    * more detail in the API documentation.
    */
-  ObjMesh objMesh = readObjFile(string(BASE_PATH + "data/floor.obj").c_str());
+  ObjMesh objMesh = readObjFile(string(BASE_PATH + "data/rectangle.obj").c_str());
 
 
   RTCGeometry geom = rtcNewGeometry(device, RTC_GEOMETRY_TYPE_TRIANGLE);
@@ -170,34 +170,31 @@ RTCScene initializeScene(RTCDevice device)
   return scene;
 }
 
-/*
- * Cast a single ray with origin (ox, oy, oz) and direction
- * (dx, dy, dz).
- */
-void castRay(RTCScene scene, 
-             float ox, float oy, float oz,
-             float dx, float dy, float dz)
+Vec3f computeLight(Vec3f ldirection, Vec3f surfNormal, Vec3f lightColor) {
+//  cout << " dir before normalization is " << ldirection.to_string() << endl;
+  ldirection = normalize(ldirection);
+//  cout << " dir after normalization is " << ldirection.to_string() << endl;
+  surfNormal = normalize(surfNormal);
+
+  float nDotL = ldirection.dot(surfNormal);
+  // TODO : we need to take input from file for diffuse coefficients instead of hardcoding
+  Vec3f lambert = Vec3f(1, 1, 1) * lightColor * max (nDotL, 0.0f);
+  return lambert;
+}
+
+
+Vec3f castRay(RTCScene scene, Light light, RTCRay rtcRay)
 {
-  /*
-   * The intersect context can be used to set intersection
-   * filters or flags, and it also contains the instance ID stack
-   * used in multi-level instancing.
-   */
   struct RTCIntersectContext context;
   rtcInitIntersectContext(&context);
 
-  /*
-   * The ray hit structure holds both the ray and the hit.
-   * The user must initialize it properly -- see API documentation
-   * for rtcIntersect1() for details.
-   */
   struct RTCRayHit rayhit;
-  rayhit.ray.org_x = ox;
-  rayhit.ray.org_y = oy;
-  rayhit.ray.org_z = oz;
-  rayhit.ray.dir_x = dx;
-  rayhit.ray.dir_y = dy;
-  rayhit.ray.dir_z = dz;
+  rayhit.ray.org_x = rtcRay.org_x;
+  rayhit.ray.org_y = rtcRay.org_y;
+  rayhit.ray.org_z = rtcRay.org_z;
+  rayhit.ray.dir_x = rtcRay.dir_x;
+  rayhit.ray.dir_y = rtcRay.dir_y;
+  rayhit.ray.dir_z = rtcRay.dir_z;
   rayhit.ray.tnear = 0;
   rayhit.ray.tfar = std::numeric_limits<float>::infinity();
   rayhit.ray.mask = -1;
@@ -205,31 +202,39 @@ void castRay(RTCScene scene,
   rayhit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
   rayhit.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
 
-  /*
-   * There are multiple variants of rtcIntersect. This one
-   * intersects a single ray with the scene.
-   */
   rtcIntersect1(scene, &context, &rayhit);
 
-  printf("%f, %f, %f: ", ox, oy, oz);
-  if (rayhit.hit.geomID != RTC_INVALID_GEOMETRY_ID)
-  {
-    /* Note how geomID and primID identify the geometry we just hit.
-     * We could use them here to interpolate geometry information,
-     * compute shading, etc.
-     * Since there is only a single triangle in this scene, we will
-     * get geomID=0 / primID=0 for all hits.
-     * There is also instID, used for instancing. See
-     * the instancing tutorials for more information */
-    printf("Found intersection on geometry %d, primitive %d at tfar=%f\n", 
-           rayhit.hit.geomID,
-           rayhit.hit.primID,
-           rayhit.ray.tfar);
+  Vec3f L(0);
+
+  if (rayhit.hit.geomID != RTC_INVALID_GEOMETRY_ID) {
+//    cout << "Intersection found for prim id " << rayhit.hit.primID << endl;
+    // create a ray to the light source
+    Vec3f hit_point = getOrigin(rayhit.ray) + rayhit.ray.tfar * getDir(rayhit.ray);
+
+    int sspp = 10000;
+    for (int i = 0; i < sspp; ++i) {
+      Vec3f light_sample = light.samplePoint();
+      RTCRay shadow_ray = createRay(hit_point, light_sample - hit_point, 0.01);
+      rtcOccluded1(scene, &context, &shadow_ray);
+      // if hit is not found, that means the surface is not occluded from light source
+      if (shadow_ray.tfar >= 0) {
+        Vec3f surfNormal = getSurfNormal(rayhit.hit);
+        L = L + computeLight(getDir(shadow_ray), surfNormal, light.I);
+      }
+    }
   }
-  else
-    printf("Did not find any intersection.\n");
+  return L;
 }
 
+RTCRay rayThroughPixel(int i, int j, Camera camera) {
+  RTCRay ray;
+  setOrigin(ray, camera.eye);
+  float aspectRatio = camera.width/camera.height;
+  float alpha = aspectRatio * tan(camera.fovy/2)*(j + 0.5 - camera.width/2)/(camera.width/2);
+  float beta = tan(camera.fovy/2)*(i + 0.5 - camera.height/2)/(camera.height/2);
+  setDir(ray, normalize(alpha*camera.u + beta*camera.v - camera.w));
+  return ray;
+}
 
 /* -------------------------------------------------------------------------- */
 
@@ -240,38 +245,39 @@ int main()
   RTCDevice device = initializeDevice();
 
   RTCScene scene = initializeScene(device);
+  Camera camera = readCameraFile((BASE_PATH + "data/camera.txt").c_str());
+  Light light = readLightFile((BASE_PATH + "data/light.txt").c_str());
 
-  /* This will hit the triangle at t=1. */
-//  castRay(scene, 0, 0, -1, 0, 0, 1);
-
-  /* This will not hit anything. */
-//  castRay(scene, 1, 1, -1, 0, 0, 1);
-
-  /* Though not strictly necessary in this example, you should
-   * always make sure to release resources allocated through Embree. */
-  rtcReleaseScene(scene);
-  rtcReleaseDevice(device);
-
-
-/*  int h = 100, w = 100;
+  int h = camera.height, w = camera.width;
   BYTE image[h][w*3];
 
   for (int i = 0; i < h; ++i) {
     for (int j = 0; j < w; ++j) {
-      image[i][j*3+0] = 0;
-      image[i][j*3+1] = 0;
-      image[i][j*3+2] = 255;
+      RTCRay incray = rayThroughPixel(i, j, camera);
+      Vec3f color = castRay(scene, light, incray);
+      color = scaleColor(reverse(color));
+
+      // set color in BGR format
+      image[i][j*3+0] = color.x;
+      image[i][j*3+1] = color.y;
+      image[i][j*3+2] = color.z;
+
     }
   }
   FreeImage_Initialise();
   FIBITMAP *img = FreeImage_ConvertFromRawBits(&(image[0][0]), w, h, w * 3, 24, 0xFF0000, 0x00FF00, 0x0000FF, false);
 
-  if (FreeImage_Save(FIF_PNG, img, "../tutorials/minimal/image.png", 0)) {
+  if (FreeImage_Save(FIF_PNG, img, (BASE_PATH + "image.png").c_str(), 0)) {
     printf("Image saved successfully!");
   }
 
 
-  FreeImage_DeInitialise();*/
+  FreeImage_DeInitialise();
+
+  /* Though not strictly necessary in this example, you should
+ * always make sure to release resources allocated through Embree. */
+  rtcReleaseScene(scene);
+  rtcReleaseDevice(device);
 
 
   return 0;
