@@ -16,28 +16,6 @@
 #  include <windows.h>
 #endif
 
-std::string BASE_PATH = "../tutorials/minimal/";
-
-/*
- * A minimal tutorial. 
- *
- * It demonstrates how to intersect a ray with a single triangle. It is
- * meant to get you started as quickly as possible, and does not output
- * an image. 
- *
- * For more complex examples, see the other tutorials.
- *
- * Compile this file using
- *   
- *   gcc -std=c99 \
- *       -I<PATH>/<TO>/<EMBREE>/include \
- *       -o minimal \
- *       minimal.c \
- *       -L<PATH>/<TO>/<EMBREE>/lib \
- *       -lembree3 
- *
- * You should be able to compile this using a C or C++ compiler.
- */
 
 /* 
  * This is only required to make the tutorial compile even when
@@ -87,106 +65,66 @@ RTCDevice initializeDevice()
  *
  * Scenes, like devices, are reference-counted.
  */
-RTCScene initializeScene(RTCDevice device)
+RTCScene initializeScene(RTCDevice device, vector<ObjMesh> objects)
 {
   RTCScene scene = rtcNewScene(device);
 
-  /* 
-   * Create a triangle mesh geometry, and initialize a single triangle.
-   * You can look up geometry types in the API documentation to
-   * find out which type expects which buffers.
-   *
-   * We create buffers directly on the device, but you can also use
-   * shared buffers. For shared buffers, special care must be taken
-   * to ensure proper alignment and padding. This is described in
-   * more detail in the API documentation.
-   */
-  ObjMesh objMesh = readObjFile(string(BASE_PATH + "data/rectangle.obj").c_str());
+  for(ObjMesh objMesh : objects) {
 
+    RTCGeometry geom = rtcNewGeometry(device, RTC_GEOMETRY_TYPE_TRIANGLE);
+    float* vertices = (float*) rtcSetNewGeometryBuffer(geom,
+                                                       RTC_BUFFER_TYPE_VERTEX,
+                                                       0,
+                                                       RTC_FORMAT_FLOAT3,
+                                                       3*sizeof(float),
+                                                       objMesh.vertex[0].size()*objMesh.vertex.size()
+    );
 
-  RTCGeometry geom = rtcNewGeometry(device, RTC_GEOMETRY_TYPE_TRIANGLE);
-  float* vertices = (float*) rtcSetNewGeometryBuffer(geom,
-                                                     RTC_BUFFER_TYPE_VERTEX,
-                                                     0,
-                                                     RTC_FORMAT_FLOAT3,
-                                                     3*sizeof(float),
-                                                     objMesh.vertex[0].size()*objMesh.vertex.size()
-                                                     );
+    unsigned* indices = (unsigned*) rtcSetNewGeometryBuffer(geom,
+                                                            RTC_BUFFER_TYPE_INDEX,
+                                                            0,
+                                                            RTC_FORMAT_UINT3,
+                                                            3*sizeof(unsigned),
+                                                            objMesh.vertindex[0].size()*objMesh.vertindex.size()
+    );
 
-  unsigned* indices = (unsigned*) rtcSetNewGeometryBuffer(geom,
-                                                          RTC_BUFFER_TYPE_INDEX,
-                                                          0,
-                                                          RTC_FORMAT_UINT3,
-                                                          3*sizeof(unsigned),
-                                                          objMesh.vertindex[0].size()*objMesh.vertindex.size()
-                                                          );
-
-  if (vertices && indices)
-  {
-    unsigned stride = objMesh.vertex[0].size();
-    for (int i = 0; i < objMesh.vertex.size(); ++i) {
-      for (int j = 0; j < objMesh.vertex[0].size(); ++j) {
-        vertices[i*stride + j] = objMesh.vertex[i][j];
+    if (vertices && indices)
+    {
+      unsigned stride = objMesh.vertex[0].size();
+      for (int i = 0; i < objMesh.vertex.size(); ++i) {
+        for (int j = 0; j < objMesh.vertex[0].size(); ++j) {
+          vertices[i*stride + j] = objMesh.vertex[i][j];
+        }
+      }
+      stride = objMesh.vertindex[0].size();
+      for (int i = 0; i < objMesh.vertindex.size(); ++i) {
+        for (int j = 0; j < objMesh.vertindex[0].size(); ++j) {
+          indices[i*stride + j] = (unsigned)objMesh.vertindex[i][j] - 1;
+        }
       }
     }
-    stride = objMesh.vertindex[0].size();
-    for (int i = 0; i < objMesh.vertindex.size(); ++i) {
-      for (int j = 0; j < objMesh.vertindex[0].size(); ++j) {
-        indices[i*stride + j] = (unsigned)objMesh.vertindex[i][j] - 1;
-      }
-    }
+    rtcCommitGeometry(geom);
 
-/*    vertices[0] = 0.f; vertices[1] = 0.f; vertices[2] = 0.f;
-    vertices[3] = 1.f; vertices[4] = 0.f; vertices[5] = 0.f;
-    vertices[6] = 0.f; vertices[7] = 1.f; vertices[8] = 0.f;
-
-    indices[0] = 0; indices[1] = 1; indices[2] = 2;*/
+    rtcAttachGeometry(scene, geom);
+    rtcReleaseGeometry(geom);
   }
 
-  /*
-   * You must commit geometry objects when you are done setting them up,
-   * or you will not get any intersections.
-   */
-  rtcCommitGeometry(geom);
-
-  /*
-   * In rtcAttachGeometry(...), the scene takes ownership of the geom
-   * by increasing its reference count. This means that we don't have
-   * to hold on to the geom handle, and may release it. The geom object
-   * will be released automatically when the scene is destroyed.
-   *
-   * rtcAttachGeometry() returns a geometry ID. We could use this to
-   * identify intersected objects later on.
-   */
-  rtcAttachGeometry(scene, geom);
-  rtcReleaseGeometry(geom);
-
-  /*
-   * Like geometry objects, scenes must be committed. This lets
-   * Embree know that it may start building an acceleration structure.
-   */
   rtcCommitScene(scene);
 
   return scene;
 }
 
-Vec3f computeLight(Vec3f ldirection, Vec3f surfNormal, Vec3f lightColor) {
-//  cout << " dir before normalization is " << ldirection.to_string() << endl;
+Vec3f computeLight(Vec3f ldirection, Material material, Vec3f surfNormal, Vec3f lightColor) {
   ldirection = normalize(ldirection);
-//  cout << " dir after normalization is " << ldirection.to_string() << endl;
   surfNormal = normalize(surfNormal);
-
   float nDotL = ldirection.dot(surfNormal);
-  if (nDotL <= 0) {
-    cout << "Negative value found for nDotL!!" << endl;
-  }
-  // TODO : we need to take input from file for diffuse coefficients instead of hardcoding
-  Vec3f lambert = Vec3f(1, 1, 1) * lightColor * max (nDotL, 0.0f);
+  Vec3f lambert = material.diffuse * lightColor * max (nDotL, 0.0f);
+
   return lambert;
 }
 
 
-Vec3f castRay(RTCScene scene, Light light, RTCRay rtcRay)
+Vec3f castRay(RTCScene scene, vector<ObjMesh> objects, Light light, RTCRay rtcRay)
 {
   struct RTCIntersectContext context;
   rtcInitIntersectContext(&context);
@@ -222,7 +160,7 @@ Vec3f castRay(RTCScene scene, Light light, RTCRay rtcRay)
       // if hit is not found, that means the surface is not occluded from light source
       if (shadow_ray.tfar >= 0) {
         Vec3f surfNormal = getSurfNormal(rayhit.hit);
-        L = L + computeLight(getDir(shadow_ray), surfNormal, light.I);
+        L = L + computeLight(getDir(shadow_ray), objects[rayhit.hit.geomID].material, surfNormal, light.I);
       }
     }
   }
@@ -247,7 +185,15 @@ int main()
    * our errorFunction. */
   RTCDevice device = initializeDevice();
 
-  RTCScene scene = initializeScene(device);
+  vector<string> objFileNames = {
+      "data/floor.obj" ,"data/grid1.obj"
+  };
+  vector<ObjMesh> objects;
+  for(auto fileName : objFileNames) {
+    objects.push_back(readObjFile((BASE_PATH + fileName).c_str()));
+  }
+
+  RTCScene scene = initializeScene(device, objects);
   Camera camera = readCameraFile((BASE_PATH + "data/camera.txt").c_str());
   Light light = readLightFile((BASE_PATH + "data/light.txt").c_str());
 
@@ -257,7 +203,7 @@ int main()
   for (int i = 0; i < h; ++i) {
     for (int j = 0; j < w; ++j) {
       RTCRay incray = rayThroughPixel(i, j, camera);
-      Vec3f color = castRay(scene, light, incray);
+      Vec3f color = castRay(scene, objects, light, incray);
       color = scaleColor(reverse(color));
 
       // set color in BGR format

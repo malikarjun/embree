@@ -139,3 +139,14 @@ void Light::setEdge1(Vec3f a, Vec3f b) {
 void Light::setEdge2(Vec3f a, Vec3f c) {
   this->edge2 = createRay(a, c - a, 0, norm(c - a));
 }
+
+Material findMaterialByName(vector<Material> materials, string name) {
+  Material material;
+  for (const auto &item : materials) {
+    if (item.name == name) {
+      material = item;
+      break;
+    }
+  }
+  return material;
+}

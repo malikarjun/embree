@@ -9,17 +9,11 @@
 #include <vector>
 #include "helper.h"
 
+extern std::string BASE_PATH;
+
 using namespace std;
 
-
-class ObjMesh {
-public:
-  vector<vector<float>> vertex;
-  vector<vector<float>> vnormal;
-  vector<vector<float >> vertindex;
-  vector<vector<float >> vnormindex;
-  vector<float> diffuse;
-};
+vector<Material> readMaterialFile(const char * filename);
 
 ObjMesh readObjFile (const char * filename);
 

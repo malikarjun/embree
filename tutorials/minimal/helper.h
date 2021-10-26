@@ -110,4 +110,30 @@ class Light {
     void setEdge2(Vec3f a, Vec3f c);
 };
 
+using std::vector;
+using std::string;
+
+
+
+class Material {
+public:
+  Vec3f diffuse, specular, ambient;
+  string name;
+  Material() {}
+  Material(string name) {
+    this->name = name;
+  }
+};
+
+class ObjMesh {
+public:
+  vector<vector<float>> vertex;
+  vector<vector<float>> vnormal;
+  vector<vector<float >> vertindex;
+  vector<vector<float >> vnormindex;
+  Material material;
+};
+
+Material findMaterialByName(vector<Material> materials, string name);
+
 

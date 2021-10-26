@@ -10,7 +10,7 @@
 #include <deque>
 #include <vector>
 
-
+std::string BASE_PATH = "../tutorials/minimal/";
 
 using namespace std;
 
@@ -46,13 +46,51 @@ vector<float> readValues(stringstream &s)
   return values;
 }
 
+vector<Material> readMaterialFile(const char * filename) {
+  vector<Material> materials;
+  ifstream in;
+  in.open(filename);
+  if (in.is_open()) {
+
+    string str, cmd;
+    getline (in, str);
+
+    int numOfMats = -1;
+    while (in) {
+      if (!((str.find_first_not_of(" \t\r\n") != string::npos) && (str[0] != '#'))) {
+        getline (in, str);
+        continue;
+      }
+      stringstream s(str);
+      s >> cmd;
+      if (cmd == "newmtl") {
+        string name;
+        s >> name;
+        numOfMats++;
+        materials.push_back(Material(name));
+      } else if (cmd == "Ka") {
+        materials[numOfMats].ambient = vectToVec3f(readValues(s));
+      } else if (cmd == "Kd") {
+        materials[numOfMats].diffuse = vectToVec3f(readValues(s));
+      } else if (cmd == "Ks") {
+        materials[numOfMats].specular = vectToVec3f(readValues(s));
+      }
+      getline (in, str);
+    }
+  }
+  return materials;
+}
+
 ObjMesh readObjFile (const char * filename) {
   ObjMesh objMesh;
-  // TODO : at some point we would like to take this as input.
-  objMesh.diffuse.push_back(1);objMesh.diffuse.push_back(0);objMesh.diffuse.push_back(0);
+
+  // read the material file first because each obj file while will have a material associated with it in the
+  // material.mtl
+  vector<Material> materials = readMaterialFile((BASE_PATH + "data/material.mtl").c_str());
 
   ifstream in;
   in.open(filename);
+  // TODO : throw exception if file not found!!
   if (in.is_open()) {
 
     string str, cmd;
@@ -70,9 +108,12 @@ ObjMesh readObjFile (const char * filename) {
         objMesh.vnormal.push_back(readValues(s));
       } else if (cmd == "f") {
         objMesh.vertindex.push_back(readValues(s));
+      } else if (cmd == "usemtl") {
+        string matName;
+        s >> matName;
+        objMesh.material = findMaterialByName(materials, matName);
       }
       getline (in, str);
-
     }
   }
   return objMesh;

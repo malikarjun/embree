@@ -1,4 +1,9 @@
 #I think this works
+
+mtllib material.mtl
+
+usemtl white
+
 v -2.0 0 2.0
 v 2.0 0 2.0
 v 2.0 0 -2.0
