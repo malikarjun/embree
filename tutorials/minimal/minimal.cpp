@@ -132,7 +132,7 @@ RTCScene initializeScene(RTCDevice device)
     stride = objMesh.vertindex[0].size();
     for (int i = 0; i < objMesh.vertindex.size(); ++i) {
       for (int j = 0; j < objMesh.vertindex[0].size(); ++j) {
-        indices[i*stride + j] = (unsigned)objMesh.vertindex[i][j];
+        indices[i*stride + j] = (unsigned)objMesh.vertindex[i][j] - 1;
       }
     }
 
@@ -177,6 +177,9 @@ Vec3f computeLight(Vec3f ldirection, Vec3f surfNormal, Vec3f lightColor) {
   surfNormal = normalize(surfNormal);
 
   float nDotL = ldirection.dot(surfNormal);
+  if (nDotL <= 0) {
+    cout << "Negative value found for nDotL!!" << endl;
+  }
   // TODO : we need to take input from file for diffuse coefficients instead of hardcoding
   Vec3f lambert = Vec3f(1, 1, 1) * lightColor * max (nDotL, 0.0f);
   return lambert;
@@ -207,11 +210,11 @@ Vec3f castRay(RTCScene scene, Light light, RTCRay rtcRay)
   Vec3f L(0);
 
   if (rayhit.hit.geomID != RTC_INVALID_GEOMETRY_ID) {
-//    cout << "Intersection found for prim id " << rayhit.hit.primID << endl;
+    cout << "Intersection found for prim id " << rayhit.hit.primID << endl;
     // create a ray to the light source
     Vec3f hit_point = getOrigin(rayhit.ray) + rayhit.ray.tfar * getDir(rayhit.ray);
 
-    int sspp = 10000;
+    int sspp = 1;
     for (int i = 0; i < sspp; ++i) {
       Vec3f light_sample = light.samplePoint();
       RTCRay shadow_ray = createRay(hit_point, light_sample - hit_point, 0.01);
