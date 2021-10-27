@@ -143,6 +143,7 @@ Vec3f castRay(RTCScene scene, vector<ObjMesh> objects, Light light, RTCRay rtcRa
   rayhit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
   rayhit.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
 
+//  cout << "Working on inc ray" << endl;
   rtcIntersect1(scene, &context, &rayhit);
 
   Vec3f L(0);
@@ -152,17 +153,20 @@ Vec3f castRay(RTCScene scene, vector<ObjMesh> objects, Light light, RTCRay rtcRa
     // create a ray to the light source
     Vec3f hit_point = getOrigin(rayhit.ray) + rayhit.ray.tfar * getDir(rayhit.ray);
 
-    int sspp = 1;
-    for (int i = 0; i < sspp; ++i) {
-      Vec3f light_sample = light.samplePoint();
+    float nhits = 0.f;
+    vector<Vec3f> sample_points = light.samplePoints(true, 9);
+    for (Vec3f light_sample : sample_points) {
+//      cout << "Working on shadow ray" << endl;
       RTCRay shadow_ray = createRay(hit_point, light_sample - hit_point, 0.01, numeric_limits<float>::infinity());
       rtcOccluded1(scene, &context, &shadow_ray);
       // if hit is not found, that means the surface is not occluded from light source
       if (shadow_ray.tfar >= 0) {
+        nhits++;
         Vec3f surfNormal = getSurfNormal(rayhit.hit);
         L = L + computeLight(getDir(shadow_ray), objects[rayhit.hit.geomID].material, surfNormal, light.I);
       }
     }
+    L = L / max(1.f, nhits);
   }
   return L;
 }
@@ -173,6 +177,7 @@ RTCRay rayThroughPixel(int i, int j, Camera camera) {
   float aspectRatio = camera.width/camera.height;
 
   float jrand = genRandomFloat(), irand = genRandomFloat();
+  jrand = 0.5, irand = 0.5;
 
   float alpha = aspectRatio * tan(camera.fovy/2)*(j + jrand - camera.width/2)/(camera.width/2);
   float beta = tan(camera.fovy/2)*(i + irand - camera.height/2)/(camera.height/2);
@@ -188,17 +193,25 @@ int main()
    * our errorFunction. */
   RTCDevice device = initializeDevice();
 
-  vector<string> objFileNames = {
-      "data/floor.obj","data/grid1.obj"
-  };
+  bool enableBasic = false;
+  string basicPath = enableBasic ? "/basic" : "";
+
+  vector<string> objFileNames;
+  if (enableBasic) {
+    objFileNames = {"data" + basicPath + "/floor.obj"};
+  } else {
+    objFileNames = {"data" + basicPath + "/floor.obj", "data/grid1.obj"};
+  }
+
   vector<ObjMesh> objects;
   for(auto fileName : objFileNames) {
-    objects.push_back(readObjFile((BASE_PATH + fileName).c_str()));
+    objects.push_back(readObjFile((BASE_PATH + fileName).c_str(),
+                                  (BASE_PATH + "data" + basicPath +"/material.mtl").c_str()));
   }
 
   RTCScene scene = initializeScene(device, objects);
-  Camera camera = readCameraFile((BASE_PATH + "data/camera.txt").c_str());
-  Light light = readLightFile((BASE_PATH + "data/light.txt").c_str());
+  Camera camera = readCameraFile((BASE_PATH + "data" + basicPath +"/camera.txt").c_str());
+  Light light = readLightFile((BASE_PATH + "data" + basicPath +"/light.txt").c_str());
 
   int h = camera.height, w = camera.width;
   BYTE image[h][w*3];

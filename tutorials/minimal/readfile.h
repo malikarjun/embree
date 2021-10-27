@@ -15,7 +15,7 @@ using namespace std;
 
 vector<Material> readMaterialFile(const char * filename);
 
-ObjMesh readObjFile (const char * filename);
+ObjMesh readObjFile (const char * filename, const char * matfilename);
 
 Camera readCameraFile(const char * filename);
 

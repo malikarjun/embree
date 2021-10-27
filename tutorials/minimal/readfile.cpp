@@ -81,12 +81,12 @@ vector<Material> readMaterialFile(const char * filename) {
   return materials;
 }
 
-ObjMesh readObjFile (const char * filename) {
+ObjMesh readObjFile (const char * filename, const char * matfilename) {
   ObjMesh objMesh;
 
   // read the material file first because each obj file while will have a material associated with it in the
   // material.mtl
-  vector<Material> materials = readMaterialFile((BASE_PATH + "data/material.mtl").c_str());
+  vector<Material> materials = readMaterialFile(matfilename);
 
   ifstream in;
   in.open(filename);

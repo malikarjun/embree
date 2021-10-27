@@ -1,0 +1,5 @@
+eye 0.0001 0 -4
+center 0 0 0
+up 0 1 0
+fovy 45
+size 640 480

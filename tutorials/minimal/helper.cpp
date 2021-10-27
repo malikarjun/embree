@@ -134,10 +134,34 @@ void Camera::setUpCameraCoordFrame() {
 
 Vec3f Light::samplePoint() {
   float u = genRandomFloat(), v = genRandomFloat();
-  // TODO : consider doing stratified sampling here.
   Vec3f samplePoint = this->point +  u * edge1.tfar * Vec3f(this->edge1.dir_x, this->edge1.dir_y, this->edge1.dir_z) +
-      v * edge2.tfar * Vec3f(this->edge2.dir_x, this->edge2.dir_y, this->edge2.dir_z);
+                      v * edge2.tfar * Vec3f(this->edge2.dir_x, this->edge2.dir_y, this->edge2.dir_z);
   return samplePoint;
+}
+
+std::vector<Vec3f> Light::samplePoints(bool stratified, int numOfSamples) {
+
+  std::vector<Vec3f> samples;
+
+  if (stratified) {
+    int rn = sqrt(numOfSamples);
+    float e1_step = this->edge1.tfar/rn, e2_step = this->edge2.tfar/rn;
+
+    for(int i = 0; i < rn; ++i) {
+      for (int j = 0; j < rn; ++j) {
+        Vec3f a = this->point + i * e1_step * getDir(this->edge1) + j * e2_step * getDir(this->edge2);
+        RTCRay edge1 = createRay(a, getDir(this->edge1), 0, e1_step);
+        RTCRay edge2 = createRay(a, getDir(this->edge2), 0, e2_step);
+        Light local_light(a, edge1, edge2, this->I);
+        samples.push_back(local_light.samplePoint());
+      }
+    }
+  } else {
+    for (int i = 0; i < numOfSamples; ++i) {
+      samples.push_back(samplePoint());
+    }
+  }
+  return samples;
 }
 
 void Light::setEdge1(Vec3f a, Vec3f b) {

@@ -111,7 +111,17 @@ class Light {
       this->edge2 = createRay(a, c - a, 0, norm(c - a));
       this->I = I;
     }
+    Light(Vec3f a, RTCRay edge1, RTCRay edge2, Vec3f I) {
+      this->point = a;
+      this->edge1 = edge1;
+      this->edge2 = edge2;
+      this->I = I;
+    }
+    std::vector<Vec3f> samplePoints(bool stratified, int numOfSamples = 9);
+
     Vec3f samplePoint();
+
+
     void setEdge1(Vec3f a, Vec3f b);
     void setEdge2(Vec3f a, Vec3f c);
 };
