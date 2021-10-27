@@ -14,6 +14,8 @@
 
 float genRandomFloat();
 
+
+
 class Vec3f {
   public:
     float x,y,z;
@@ -42,6 +44,10 @@ class Vec3f {
       return std::to_string(this->x) + " " + std::to_string(this->y) + " " + std::to_string(this->z);
     }
 };
+
+float getMaxVal(Vec3f vec);
+
+float getMinVal(Vec3f vec);
 
 Vec3f operator*(Vec3f vec, const float val);
 

@@ -10,6 +10,14 @@ float genRandomFloat() {
   return dis(e);
 }
 
+float getMaxVal(Vec3f vec) {
+  return std::max(vec.x, std::max(vec.y, vec.z));
+}
+
+float getMinVal(Vec3f vec) {
+  return std::min(vec.x, std::min(vec.y, vec.z));
+}
+
 Vec3f Vec3f::operator+(const Vec3f& vec) {
   Vec3f ans;
   ans.x = this->x + vec.x;

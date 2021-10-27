@@ -155,7 +155,7 @@ Vec3f castRay(RTCScene scene, vector<ObjMesh> objects, Light light, RTCRay rtcRa
     int sspp = 1;
     for (int i = 0; i < sspp; ++i) {
       Vec3f light_sample = light.samplePoint();
-      RTCRay shadow_ray = createRay(hit_point, light_sample - hit_point, 0.01);
+      RTCRay shadow_ray = createRay(hit_point, light_sample - hit_point, 0.01, numeric_limits<float>::infinity());
       rtcOccluded1(scene, &context, &shadow_ray);
       // if hit is not found, that means the surface is not occluded from light source
       if (shadow_ray.tfar >= 0) {
@@ -171,8 +171,11 @@ RTCRay rayThroughPixel(int i, int j, Camera camera) {
   RTCRay ray;
   setOrigin(ray, camera.eye);
   float aspectRatio = camera.width/camera.height;
-  float alpha = aspectRatio * tan(camera.fovy/2)*(j + 0.5 - camera.width/2)/(camera.width/2);
-  float beta = tan(camera.fovy/2)*(i + 0.5 - camera.height/2)/(camera.height/2);
+
+  float jrand = genRandomFloat(), irand = genRandomFloat();
+
+  float alpha = aspectRatio * tan(camera.fovy/2)*(j + jrand - camera.width/2)/(camera.width/2);
+  float beta = tan(camera.fovy/2)*(i + irand - camera.height/2)/(camera.height/2);
   setDir(ray, normalize(alpha*camera.u + beta*camera.v - camera.w));
   return ray;
 }
@@ -203,6 +206,8 @@ int main()
   for (int i = 0; i < h; ++i) {
     for (int j = 0; j < w; ++j) {
       RTCRay incray = rayThroughPixel(i, j, camera);
+
+      // shoot multiple rays for anti-aliasing
       Vec3f color = castRay(scene, objects, light, incray);
       color = scaleColor(reverse(color));
 
