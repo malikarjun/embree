@@ -76,7 +76,7 @@ float degToRadian(float deg) {
 }
 
 Vec3f reverse(Vec3f vec) {
-  return Vec3f(vec.z, vec.y, vec.z);
+  return Vec3f(vec.z, vec.y, vec.x);
 }
 
 Vec3f scaleColor(Vec3f color) {

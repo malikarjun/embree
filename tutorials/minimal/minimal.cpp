@@ -148,7 +148,7 @@ Vec3f castRay(RTCScene scene, vector<ObjMesh> objects, Light light, RTCRay rtcRa
   Vec3f L(0);
 
   if (rayhit.hit.geomID != RTC_INVALID_GEOMETRY_ID) {
-    cout << "Intersection found for prim id " << rayhit.hit.primID << endl;
+//    cout << "Intersection found for prim id " << rayhit.hit.primID << endl;
     // create a ray to the light source
     Vec3f hit_point = getOrigin(rayhit.ray) + rayhit.ray.tfar * getDir(rayhit.ray);
 
@@ -186,7 +186,7 @@ int main()
   RTCDevice device = initializeDevice();
 
   vector<string> objFileNames = {
-      "data/floor.obj" ,"data/grid1.obj"
+      "data/floor.obj","data/grid1.obj"
   };
   vector<ObjMesh> objects;
   for(auto fileName : objFileNames) {
