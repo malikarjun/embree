@@ -11,6 +11,10 @@
 #include <random>
 #include <string>
 
+using std::cos;
+using std::sin;
+using std::acos;
+
 
 float genRandomFloat();
 
@@ -41,7 +45,7 @@ class Vec3f {
     Vec3f operator*(const Vec3f& vec);
 
     std::string to_string() {
-      return std::to_string(this->x) + " " + std::to_string(this->y) + " " + std::to_string(this->z);
+      return std::to_string(this->x) + ", " + std::to_string(this->y) + ", " + std::to_string(this->z);
     }
 };
 
@@ -140,6 +144,9 @@ public:
     this->name = name;
   }
 };
+
+vector<Vec3f> sampleOverHemisphere(Vec3f normal, int numOfSamples=9);
+
 
 class ObjMesh {
 public:

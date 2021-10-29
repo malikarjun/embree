@@ -109,7 +109,7 @@ Vec3f getDir(RTCRay ray) {
 }
 
 Vec3f getSurfNormal(RTCHit hit) {
-  return Vec3f(hit.Ng_x, hit.Ng_y, hit.Ng_z);
+  return normalize(Vec3f(hit.Ng_x, hit.Ng_y, hit.Ng_z));
 }
 
 RTCRay createRay(Vec3f org, Vec3f dir, float tnear, float tfar) {
@@ -170,6 +170,29 @@ void Light::setEdge1(Vec3f a, Vec3f b) {
 
 void Light::setEdge2(Vec3f a, Vec3f c) {
   this->edge2 = createRay(a, c - a, 0, norm(c - a));
+}
+
+vector<Vec3f> sampleOverHemisphere(Vec3f normal, int numOfSamples) {
+  vector<Vec3f> samples;
+
+  for (int i = 0; i < numOfSamples; ++i) {
+    float theta = acos(genRandomFloat());
+    float phi = 2*M_PI*genRandomFloat();
+    Vec3f s(cos(phi)*sin(theta), sin(phi)* sin(theta), cos(theta));
+    Vec3f w = normalize(normal);
+
+    Vec3f a(0, 1, 0);
+    // if a and w are close then choose another direction
+    if (a.dot(w) > 0.9) {
+      a = Vec3f(1, 0, 0);
+    }
+    Vec3f u = normalize(cross(a, w));
+    Vec3f v = cross(w, u);
+
+    samples.push_back(s.x*u + s.y*v + s.z*w);
+  }
+
+  return samples;
 }
 
 Material findMaterialByName(vector<Material> materials, string name) {

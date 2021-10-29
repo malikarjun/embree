@@ -151,18 +151,24 @@ Vec3f castRay(RTCScene scene, vector<ObjMesh> objects, Light light, RTCRay rtcRa
   if (rayhit.hit.geomID != RTC_INVALID_GEOMETRY_ID) {
 //    cout << "Intersection found for prim id " << rayhit.hit.primID << endl;
     // create a ray to the light source
-    Vec3f hit_point = getOrigin(rayhit.ray) + rayhit.ray.tfar * getDir(rayhit.ray);
+    Vec3f hitPoint = getOrigin(rayhit.ray) + rayhit.ray.tfar * getDir(rayhit.ray);
+
 
     float nhits = 0.f;
-    vector<Vec3f> sample_points = light.samplePoints(true, 9);
-    for (Vec3f light_sample : sample_points) {
+//    vector<Vec3f> sample_points = light.samplePoints(true, 9);
+
+    Vec3f surfNormal = getSurfNormal(rayhit.hit);
+//    vector<Vec3f> samplePoints = sampleOverHemisphere(surfNormal, 9);
+    // TODO: why is sampling over hemisphere not working?
+    vector<Vec3f> samplePoints = light.samplePoints(true, 9);
+
+    for (Vec3f lightSample : samplePoints) {
 //      cout << "Working on shadow ray" << endl;
-      RTCRay shadow_ray = createRay(hit_point, light_sample - hit_point, 0.01, numeric_limits<float>::infinity());
+      RTCRay shadow_ray = createRay(hitPoint, lightSample - hitPoint, 0.01, numeric_limits<float>::infinity());
       rtcOccluded1(scene, &context, &shadow_ray);
       // if hit is not found, that means the surface is not occluded from light source
       if (shadow_ray.tfar >= 0) {
         nhits++;
-        Vec3f surfNormal = getSurfNormal(rayhit.hit);
         L = L + computeLight(getDir(shadow_ray), objects[rayhit.hit.geomID].material, surfNormal, light.I);
       }
     }
