@@ -9,37 +9,37 @@
 namespace embree
 {
   extern "C" {
-    int g_instancing_mode = SceneGraph::INSTANCING_NONE;
-    float g_min_width_max_radius_scale = 1.0f;
+  int g_instancing_mode = SceneGraph::INSTANCING_NONE;
+  float g_min_width_max_radius_scale = 1.0f;
   }
 
   void deleteGeometry(ISPCGeometry* geom)
   {
     switch (geom->type) {
-    case TRIANGLE_MESH: delete (ISPCTriangleMesh*) geom; break;
-    case SUBDIV_MESH  : delete (ISPCSubdivMesh*) geom; break;
-    case INSTANCE: delete (ISPCInstance*) geom; break;
-    case GROUP: delete (ISPCGroup*) geom; break;
-    case QUAD_MESH: delete (ISPCQuadMesh*) geom; break;
-    case CURVES: delete (ISPCHairSet*) geom; break;
-    case GRID_MESH: delete (ISPCGridMesh*) geom; break;
-    case POINTS: delete (ISPCPointSet*) geom; break;
-    default: assert(false); break;
+      case TRIANGLE_MESH: delete (ISPCTriangleMesh*) geom; break;
+      case SUBDIV_MESH  : delete (ISPCSubdivMesh*) geom; break;
+      case INSTANCE: delete (ISPCInstance*) geom; break;
+      case GROUP: delete (ISPCGroup*) geom; break;
+      case QUAD_MESH: delete (ISPCQuadMesh*) geom; break;
+      case CURVES: delete (ISPCHairSet*) geom; break;
+      case GRID_MESH: delete (ISPCGridMesh*) geom; break;
+      case POINTS: delete (ISPCPointSet*) geom; break;
+      default: assert(false); break;
     }
   }
-  
+
   ISPCScene::ISPCScene(TutorialScene* in)
   {
     geometries = new ISPCGeometry*[in->geometries.size()];
     for (size_t i=0; i<in->geometries.size(); i++)
       geometries[i] = convertGeometry(in,in->geometries[i]);
     numGeometries = unsigned(in->geometries.size());
-    
+
     materials = new ISPCMaterial*[in->materials.size()];
     for (size_t i=0; i<in->materials.size(); i++)
       materials[i] = (ISPCMaterial*) in->materials[i]->material();
     numMaterials = unsigned(in->materials.size());
-    
+
     lights = new Light*[in->lights.size()];
     numLights = 0;
     for (size_t i=0; i<in->lights.size(); i++)
@@ -52,7 +52,7 @@ namespace embree
   ISPCScene::~ISPCScene()
   {
     /* delete all geometries */
-    for (size_t i=0; i<numGeometries; i++) 
+    for (size_t i=0; i<numGeometries; i++)
       deleteGeometry(geometries[i]);
 
     delete[] geometries;
@@ -61,84 +61,72 @@ namespace embree
       Light_destroy(lights[i]);
     delete[] lights;
   }
-  
+
   Light* ISPCScene::convertLight(Ref<SceneGraph::Light> in)
   {
     void* out = 0;
-    
+
     switch (in->getType())
     {
-    case SceneGraph::LIGHT_AMBIENT:
-    {
-      Ref<SceneGraph::AmbientLight> inAmbient = in.dynamicCast<SceneGraph::AmbientLight>();
-      out = AmbientLight_create();
-      AmbientLight_set(out, inAmbient->L);
-      break;
+      case SceneGraph::LIGHT_AMBIENT:
+      {
+        Ref<SceneGraph::AmbientLight> inAmbient = in.dynamicCast<SceneGraph::AmbientLight>();
+        out = AmbientLight_create();
+        AmbientLight_set(out, inAmbient->L);
+        break;
+      }
+      case SceneGraph::LIGHT_DIRECTIONAL:
+      {
+        Ref<SceneGraph::DirectionalLight> inDirectional = in.dynamicCast<SceneGraph::DirectionalLight>();
+        out = DirectionalLight_create();
+        DirectionalLight_set(out, -normalize(inDirectional->D), inDirectional->E, 1.0f);
+        break;
+      }
+      case SceneGraph::LIGHT_DISTANT:
+      {
+        Ref<SceneGraph::DistantLight> inDistant = in.dynamicCast<SceneGraph::DistantLight>();
+        out = DirectionalLight_create();
+        DirectionalLight_set(out,
+                             -normalize(inDistant->D),
+                             inDistant->L * rcp(uniformSampleConePDF(inDistant->cosHalfAngle)),
+                             inDistant->cosHalfAngle);
+        break;
+      }
+      case SceneGraph::LIGHT_POINT:
+      {
+        Ref<SceneGraph::PointLight> inPoint = in.dynamicCast<SceneGraph::PointLight>();
+        out = PointLight_create();
+        PointLight_set(out, inPoint->P, inPoint->I, 0.f);
+        break;
+      }
+      case SceneGraph::LIGHT_SPOT:
+      case SceneGraph::LIGHT_TRIANGLE:
+      case SceneGraph::LIGHT_QUAD:
+      {
+        // FIXME: not implemented yet
+        break;
+      }
+
+      default:
+        THROW_RUNTIME_ERROR("unknown light type");
     }
-    case SceneGraph::LIGHT_DIRECTIONAL:
-    {
-      Ref<SceneGraph::DirectionalLight> inDirectional = in.dynamicCast<SceneGraph::DirectionalLight>();
-      out = DirectionalLight_create();
-      DirectionalLight_set(out, -normalize(inDirectional->D), inDirectional->E, 1.0f);
-      break;
-    }
-    case SceneGraph::LIGHT_DISTANT:
-    {
-      Ref<SceneGraph::DistantLight> inDistant = in.dynamicCast<SceneGraph::DistantLight>();
-      out = DirectionalLight_create();
-      DirectionalLight_set(out,
-                           -normalize(inDistant->D),
-                           inDistant->L * rcp(uniformSampleConePDF(inDistant->cosHalfAngle)),
-                           inDistant->cosHalfAngle);
-      break;
-    }
-    case SceneGraph::LIGHT_POINT:
-    {
-      Ref<SceneGraph::PointLight> inPoint = in.dynamicCast<SceneGraph::PointLight>();
-      out = PointLight_create();
-      PointLight_set(out, inPoint->P, inPoint->I, 0.f);
-      break;
-    }
-    case SceneGraph::LIGHT_SPOT:
-    {
-      break;
-    }
-    case SceneGraph::LIGHT_TRIANGLE:
-    {
-      break;
-    }
-    case SceneGraph::LIGHT_QUAD:
-    {
-      Ref<SceneGraph::QuadLight> inQuad = in.dynamicCast<SceneGraph::QuadLight>();
-      out = QuadLight_create();
-      // TODO: why are we passing the fourth vertex of the quadrilateral if it is not being used?
-      Vec3fa edge0 = inQuad->v3 - inQuad->v0;
-      Vec3fa edge1 = inQuad->v1 - inQuad->v0;
-//      QuadLight_set(out, inQuad->v0,  edge0, edge1,  inQuad->L);
-      QuadLight_set(out, inQuad->v0,  edge0, edge1,  inQuad->L);
-      break;
-    }
-    
-    default:
-      THROW_RUNTIME_ERROR("unknown light type");
-    }
-    
+
     return (Light*)out;
   }
-  
-  ISPCTriangleMesh::ISPCTriangleMesh (TutorialScene* scene_in, Ref<SceneGraph::TriangleMeshNode> in) 
-    : geom(TRIANGLE_MESH), positions(nullptr), normals(nullptr)
+
+  ISPCTriangleMesh::ISPCTriangleMesh (TutorialScene* scene_in, Ref<SceneGraph::TriangleMeshNode> in)
+      : geom(TRIANGLE_MESH), positions(nullptr), normals(nullptr)
   {
     positions = new Vec3fa*[in->numTimeSteps()];
     for (size_t i=0; i<in->numTimeSteps(); i++)
       positions[i] = in->positions[i].data();
-    
+
     if (in->normals.size()) {
       normals = new Vec3fa*[in->numTimeSteps()];
       for (size_t i=0; i<in->numTimeSteps(); i++)
         normals[i] = in->normals[i].data();
     }
-    
+
     texcoords = in->texcoords.data();
     triangles = (ISPCTriangle*) in->triangles.data();
     startTime = in->time_range.lower;
@@ -153,9 +141,9 @@ namespace embree
     if (positions) delete[] positions;
     if (normals) delete[] normals;
   }
-  
-  ISPCQuadMesh::ISPCQuadMesh (TutorialScene* scene_in, Ref<SceneGraph::QuadMeshNode> in) 
-    : geom(QUAD_MESH), positions(nullptr), normals(nullptr)
+
+  ISPCQuadMesh::ISPCQuadMesh (TutorialScene* scene_in, Ref<SceneGraph::QuadMeshNode> in)
+      : geom(QUAD_MESH), positions(nullptr), normals(nullptr)
   {
     positions = new Vec3fa*[in->numTimeSteps()];
     for (size_t i=0; i<in->numTimeSteps(); i++)
@@ -166,7 +154,7 @@ namespace embree
       for (size_t i=0; i<in->numTimeSteps(); i++)
         normals[i] = in->normals[i].data();
     }
-    
+
     texcoords = in->texcoords.data();
     quads = (ISPCQuad*) in->quads.data();
     startTime = in->time_range.lower;
@@ -183,8 +171,8 @@ namespace embree
   }
 
 
-  ISPCGridMesh::ISPCGridMesh (TutorialScene* scene_in, Ref<SceneGraph::GridMeshNode> in) 
-    : geom(GRID_MESH), positions(nullptr)
+  ISPCGridMesh::ISPCGridMesh (TutorialScene* scene_in, Ref<SceneGraph::GridMeshNode> in)
+      : geom(GRID_MESH), positions(nullptr)
   {
     positions = new Vec3fa*[in->numTimeSteps()];
     for (size_t i=0; i<in->numTimeSteps(); i++)
@@ -204,8 +192,8 @@ namespace embree
   }
 
 
-  ISPCSubdivMesh::ISPCSubdivMesh (TutorialScene* scene_in, Ref<SceneGraph::SubdivMeshNode> in) 
-    : geom(SUBDIV_MESH), positions(nullptr), normals(nullptr)
+  ISPCSubdivMesh::ISPCSubdivMesh (TutorialScene* scene_in, Ref<SceneGraph::SubdivMeshNode> in)
+      : geom(SUBDIV_MESH), positions(nullptr), normals(nullptr)
   {
     positions = new Vec3fa*[in->numTimeSteps()];
     for (size_t i=0; i<in->numTimeSteps(); i++)
@@ -216,7 +204,7 @@ namespace embree
       for (size_t i=0; i<in->numTimeSteps(); i++)
         normals[i] = in->normals[i].data();
     }
-    
+
     texcoords = in->texcoords.data();
     position_indices = in->position_indices.data();
     normal_indices = in->normal_indices.data();
@@ -254,7 +242,7 @@ namespace embree
       offset+=verticesPerFace[i];
     }
   }
-  
+
   ISPCSubdivMesh::~ISPCSubdivMesh ()
   {
     if (positions) delete[] positions;
@@ -262,9 +250,9 @@ namespace embree
     if (subdivlevel) delete[] subdivlevel;
     if (face_offsets) delete[] face_offsets;
   }
-  
+
   ISPCHairSet::ISPCHairSet (TutorialScene* scene_in, RTCGeometryType type, Ref<SceneGraph::HairSetNode> in)
-    : geom(CURVES), normals(nullptr), tangents(nullptr), dnormals(nullptr), hairs(nullptr), flags(nullptr), type(type)
+      : geom(CURVES), normals(nullptr), tangents(nullptr), dnormals(nullptr), hairs(nullptr), flags(nullptr), type(type)
   {
     positions = new Vec3fa*[in->numTimeSteps()];
     for (size_t i=0; i<in->numTimeSteps(); i++)
@@ -287,12 +275,12 @@ namespace embree
       for (size_t i=0; i<in->numTimeSteps(); i++)
         dnormals[i] = in->dnormals[i].data();
     }
-    
+
     hairs = (ISPCHair*) in->hairs.data();
 
     if (in->flags.size())
       flags = (unsigned char*)in->flags.data();
-    
+
     startTime = in->time_range.lower;
     endTime   = in->time_range.upper;
     numTimeSteps = (unsigned) in->numTimeSteps();
@@ -310,7 +298,7 @@ namespace embree
   }
 
   ISPCPointSet::ISPCPointSet (TutorialScene* scene_in, RTCGeometryType type, Ref<SceneGraph::PointSetNode> in)
-    : geom(POINTS), positions(nullptr), normals(nullptr), type(type)
+      : geom(POINTS), positions(nullptr), normals(nullptr), type(type)
   {
     positions = new Vec3fa*[in->numTimeSteps()];
     for (size_t i=0; i<in->numTimeSteps(); i++)
@@ -336,7 +324,7 @@ namespace embree
 
 
   ISPCInstance::ISPCInstance (TutorialScene* scene, Ref<SceneGraph::TransformNode> in)
-    : geom(INSTANCE), numTimeSteps(unsigned(in->spaces.size())) 
+      : geom(INSTANCE), numTimeSteps(unsigned(in->spaces.size()))
   {
     spaces = (AffineSpace3fa*) alignedMalloc(in->spaces.size()*sizeof(AffineSpace3fa),16);
     geom.geomID = scene->geometryID(in->child);
@@ -353,7 +341,7 @@ namespace embree
   }
 
   ISPCGroup::ISPCGroup (TutorialScene* scene, Ref<SceneGraph::GroupNode> in)
-    : geom(GROUP)
+      : geom(GROUP)
   {
     numGeometries = (unsigned int) in->size();
     geometries = new ISPCGeometry*[numGeometries];
@@ -384,7 +372,7 @@ namespace embree
     else if (Ref<SceneGraph::HairSetNode> mesh = in.dynamicCast<SceneGraph::HairSetNode>())
       geom = (ISPCGeometry*) new ISPCHairSet(scene,mesh->type,mesh);
     else if (Ref<SceneGraph::GridMeshNode> mesh = in.dynamicCast<SceneGraph::GridMeshNode>())
-      geom = (ISPCGeometry*) new ISPCGridMesh(scene,mesh); 
+      geom = (ISPCGeometry*) new ISPCGridMesh(scene,mesh);
     else if (Ref<SceneGraph::TransformNode> mesh = in.dynamicCast<SceneGraph::TransformNode>())
       geom = (ISPCGeometry*) new ISPCInstance(scene,mesh);
     else if (Ref<SceneGraph::GroupNode> mesh = in.dynamicCast<SceneGraph::GroupNode>())
@@ -416,7 +404,7 @@ namespace embree
     mesh->geom.geomID = geomID;
     return geomID;
   }
-  
+
   unsigned int ConvertQuadMesh(RTCDevice device, ISPCQuadMesh* mesh, RTCBuildQuality quality, RTCScene scene_out, unsigned int geomID)
   {
     RTCGeometry geom = rtcNewGeometry (device, RTC_GEOMETRY_TYPE_QUAD);
@@ -444,7 +432,7 @@ namespace embree
     rtcSetGeometryBuildQuality(geom, quality);
     for (unsigned int t=0; t<mesh->numTimeSteps; t++) {
       rtcSetSharedGeometryBuffer(geom, RTC_BUFFER_TYPE_VERTEX, t, RTC_FORMAT_FLOAT3, mesh->positions[t], 0, sizeof(Vec3fa), mesh->numVertices);
-    }    
+    }
     rtcSetSharedGeometryBuffer(geom, RTC_BUFFER_TYPE_GRID, 0, RTC_FORMAT_GRID, mesh->grids, 0, sizeof(ISPCGrid), mesh->numGrids);
     rtcSetGeometryUserData(geom, mesh);
     rtcCommitGeometry(geom);
@@ -454,7 +442,7 @@ namespace embree
     mesh->geom.geomID = geomID;
     return geomID;
   }
-  
+
   unsigned int ConvertSubdivMesh(RTCDevice device, ISPCSubdivMesh* mesh, RTCBuildQuality quality, RTCScene scene_out, unsigned int geomID)
   {
     RTCGeometry geom = rtcNewGeometry(device, RTC_GEOMETRY_TYPE_SUBDIVISION);
@@ -510,7 +498,7 @@ namespace embree
     mesh->geom.geomID = geomID;
     return geomID;
   }
-  
+
   unsigned int ConvertCurveGeometry(RTCDevice device, ISPCHairSet* mesh, RTCBuildQuality quality, RTCScene scene_out, unsigned int geomID)
   {
     RTCGeometry geom = rtcNewGeometry(device, mesh->type);
@@ -521,13 +509,13 @@ namespace embree
     for (unsigned int t=0; t<mesh->numTimeSteps; t++) {
       rtcSetSharedGeometryBuffer(geom, RTC_BUFFER_TYPE_VERTEX, t, RTC_FORMAT_FLOAT4, mesh->positions[t], 0, sizeof(Vec3fa), mesh->numVertices);
     }
-    
+
     if (mesh->normals) {
       for (unsigned int t=0; t<mesh->numTimeSteps; t++) {
         rtcSetSharedGeometryBuffer(geom, RTC_BUFFER_TYPE_NORMAL, t, RTC_FORMAT_FLOAT3, mesh->normals[t], 0, sizeof(Vec3fa), mesh->numVertices);
       }
     }
-    
+
     if (mesh->tangents) {
       for (unsigned int t=0; t<mesh->numTimeSteps; t++) {
         rtcSetSharedGeometryBuffer(geom, RTC_BUFFER_TYPE_TANGENT, t, RTC_FORMAT_FLOAT4, mesh->tangents[t], 0, sizeof(Vec3fa), mesh->numVertices);
@@ -539,12 +527,12 @@ namespace embree
         rtcSetSharedGeometryBuffer(geom, RTC_BUFFER_TYPE_NORMAL_DERIVATIVE, t, RTC_FORMAT_FLOAT3, mesh->dnormals[t], 0, sizeof(Vec3fa), mesh->numVertices);
       }
     }
-    
+
     rtcSetSharedGeometryBuffer(geom, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT, mesh->hairs, 0, sizeof(ISPCHair), mesh->numHairs);
     if (mesh->type != RTC_GEOMETRY_TYPE_FLAT_LINEAR_CURVE && mesh->type != RTC_GEOMETRY_TYPE_ROUND_LINEAR_CURVE && mesh->type != RTC_GEOMETRY_TYPE_CONE_LINEAR_CURVE) {
       rtcSetGeometryTessellationRate(geom,(float)mesh->tessellation_rate);
     }
-    
+
 #if RTC_MIN_WIDTH
     if (g_min_width_max_radius_scale >= 1.0f)
       rtcSetGeometryMaxRadiusScale(geom,g_min_width_max_radius_scale);
@@ -582,7 +570,7 @@ namespace embree
     if (g_min_width_max_radius_scale >= 1.0f)
       rtcSetGeometryMaxRadiusScale(geom,g_min_width_max_radius_scale);
 #endif
-      
+
     rtcSetGeometryUserData(geom, mesh);
     rtcCommitGeometry(geom);
 
@@ -662,14 +650,14 @@ namespace embree
       return geomID;
     }
   }
-  
+
   typedef ISPCInstance* ISPCInstance_ptr;
   typedef ISPCGeometry* ISPCGeometry_ptr;
-  
+
   extern "C" RTCScene ConvertScene(RTCDevice g_device, ISPCScene* scene_in, RTCBuildQuality quality)
   {
     RTCScene scene_out = rtcNewScene(g_device);
-    
+
     /* use scene instancing feature */
     if (g_instancing_mode != SceneGraph::INSTANCING_NONE)
     {
@@ -688,8 +676,8 @@ namespace embree
           assert(false);
       }
     }
-    
-    /* no instancing */
+
+      /* no instancing */
     else
     {
       for (unsigned int i=0; i<scene_in->numGeometries; i++)
@@ -703,9 +691,9 @@ namespace embree
           ConvertQuadMesh(g_device,(ISPCQuadMesh*) geometry, quality, scene_out, i);
         else if (geometry->type == CURVES)
           ConvertCurveGeometry(g_device,(ISPCHairSet*) geometry, quality, scene_out, i);
-         else if (geometry->type == GRID_MESH)
+        else if (geometry->type == GRID_MESH)
           ConvertGridMesh(g_device,(ISPCGridMesh*) geometry, quality, scene_out, i);
-         else if (geometry->type == POINTS)
+        else if (geometry->type == POINTS)
           ConvertPoints(g_device,(ISPCPointSet*) geometry, quality, scene_out, i);
         else
           assert(false);
