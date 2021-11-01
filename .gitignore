@@ -11,3 +11,4 @@ include/embree3/rtcore_config.h
 build
 cmake-build-debug
 **/tutorials/**/cmake-build-debug
+.idea
