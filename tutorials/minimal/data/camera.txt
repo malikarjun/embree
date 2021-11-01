@@ -1,4 +1,4 @@
-eye 0 10 10
+eye 0 10 -10
 center 0 0 0
 up 0 1 0
 fovy 30

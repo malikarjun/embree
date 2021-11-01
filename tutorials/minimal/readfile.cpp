@@ -103,11 +103,11 @@ ObjMesh readObjFile (const char * filename, const char * matfilename) {
       stringstream s(str);
       s >> cmd;
       if (cmd == "v") {
-        objMesh.vertex.push_back(readValues(s));
+        objMesh.vertex.push_back(vectToVec3f(readValues(s)));
       } else if (cmd == "vn") {
-        objMesh.vnormal.push_back(readValues(s));
+        objMesh.vnormal.push_back(vectToVec3f(readValues(s)));
       } else if (cmd == "f") {
-        objMesh.vertindex.push_back(readValues(s));
+        objMesh.vertindex.push_back(vectToVec3f(readValues(s)));
       } else if (cmd == "usemtl") {
         string matName;
         s >> matName;
@@ -172,7 +172,7 @@ Light readLightFile (const char * filename) {
         light.point = vectToVec3f(readValues(s));
       } else if (cmd == "b" )  {
         light.setEdge1(light.point, vectToVec3f(readValues(s)));
-      } else if (cmd == "b" )  {
+      } else if (cmd == "c" )  {
         light.setEdge2(light.point, vectToVec3f(readValues(s)));
       } else if (cmd == "i" )  {
         light.I = vectToVec3f(readValues(s));

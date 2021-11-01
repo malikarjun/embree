@@ -77,7 +77,7 @@ RTCScene initializeScene(RTCDevice device, vector<ObjMesh> objects)
                                                        0,
                                                        RTC_FORMAT_FLOAT3,
                                                        3*sizeof(float),
-                                                       objMesh.vertex[0].size()*objMesh.vertex.size()
+                                                       3*objMesh.vertex.size()*objMesh.vertex.size()
     );
 
     unsigned* indices = (unsigned*) rtcSetNewGeometryBuffer(geom,
@@ -85,21 +85,21 @@ RTCScene initializeScene(RTCDevice device, vector<ObjMesh> objects)
                                                             0,
                                                             RTC_FORMAT_UINT3,
                                                             3*sizeof(unsigned),
-                                                            objMesh.vertindex[0].size()*objMesh.vertindex.size()
+                                                            3*objMesh.vertindex.size()*objMesh.vertindex.size()
     );
 
     if (vertices && indices)
     {
-      unsigned stride = objMesh.vertex[0].size();
+      unsigned stride = 3;
       for (int i = 0; i < objMesh.vertex.size(); ++i) {
-        for (int j = 0; j < objMesh.vertex[0].size(); ++j) {
-          vertices[i*stride + j] = objMesh.vertex[i][j];
+        for (int j = 0; j < objMesh.vertex[i].vectorF().size(); ++j) {
+          vertices[i*stride + j] = objMesh.vertex[i].vectorF()[j];
         }
       }
-      stride = objMesh.vertindex[0].size();
+
       for (int i = 0; i < objMesh.vertindex.size(); ++i) {
-        for (int j = 0; j < objMesh.vertindex[0].size(); ++j) {
-          indices[i*stride + j] = (unsigned)objMesh.vertindex[i][j] - 1;
+        for (int j = 0; j < objMesh.vertindex[i].vectorF().size(); ++j) {
+          indices[i*stride + j] = (unsigned) objMesh.vertindex[i].vectorF()[j] - 1;
         }
       }
     }
@@ -123,6 +123,24 @@ Vec3f computeLight(Vec3f ldirection, Material material, Vec3f surfNormal, Vec3f 
   return lambert;
 }
 
+Vec3f computeLight(RTCRayHit rayHit, Light light, ObjMesh& objMesh, Vec3f lightLoc, Vec3f incDir) {
+  Vec3f lambert;
+  Vec3f surfNormal = getSurfNormal(rayHit.hit);
+  Vec3f material = objMesh.material.diffuse;
+  incDir = normalize(incDir);
+
+  Vec3f lightNormal = normalize(light.normal);
+  Vec3f hitPoint = getOrigin(rayHit.ray) + rayHit.ray.tfar * getDir(rayHit.ray);
+  float dist = norm(hitPoint - lightLoc);
+
+//  Vec3f hitPoint1 = barycentricTo3d(rayHit.hit, objMesh);
+//  float dist1 = norm(hitPoint1 - lightLoc);
+  float ldot = lightNormal.dotClamp(incDir);
+
+  lambert = light.I * material * surfNormal.dotClamp(incDir) * ldot / (dist * dist);
+  return lambert;
+}
+
 
 Vec3f castRay(RTCScene scene, vector<ObjMesh> objects, Light light, RTCRay rtcRay)
 {
@@ -143,36 +161,28 @@ Vec3f castRay(RTCScene scene, vector<ObjMesh> objects, Light light, RTCRay rtcRa
   rayhit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
   rayhit.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
 
-//  cout << "Working on inc ray" << endl;
   rtcIntersect1(scene, &context, &rayhit);
 
   Vec3f L(0);
 
   if (rayhit.hit.geomID != RTC_INVALID_GEOMETRY_ID) {
-//    cout << "Intersection found for prim id " << rayhit.hit.primID << endl;
     // create a ray to the light source
     Vec3f hitPoint = getOrigin(rayhit.ray) + rayhit.ray.tfar * getDir(rayhit.ray);
-
-
-    float nhits = 0.f;
-//    vector<Vec3f> sample_points = light.samplePoints(true, 9);
-
     Vec3f surfNormal = getSurfNormal(rayhit.hit);
 //    vector<Vec3f> samplePoints = sampleOverHemisphere(surfNormal, 9);
     // TODO: why is sampling over hemisphere not working?
-    vector<Vec3f> samplePoints = light.samplePoints(true, 9);
+    vector<Vec3f> samplePoints = light.samplePoints(true, 100);
 
     for (Vec3f lightSample : samplePoints) {
-//      cout << "Working on shadow ray" << endl;
-      RTCRay shadow_ray = createRay(hitPoint, lightSample - hitPoint, 0.01, numeric_limits<float>::infinity());
-      rtcOccluded1(scene, &context, &shadow_ray);
+      RTCRay shadowRay = createRay(hitPoint, lightSample - hitPoint, 0.001, numeric_limits<float>::infinity());
+      rtcOccluded1(scene, &context, &shadowRay);
       // if hit is not found, that means the surface is not occluded from light source
-      if (shadow_ray.tfar >= 0) {
-        nhits++;
-        L = L + computeLight(getDir(shadow_ray), objects[rayhit.hit.geomID].material, surfNormal, light.I);
+      if (shadowRay.tfar >= 0) {
+//        L = L + computeLight(getDir(shadowRay), objects[rayhit.hit.geomID].material, surfNormal, light.I);
+        L = L + computeLight(rayhit, light, objects[rayhit.hit.geomID], lightSample, getDir(shadowRay));
       }
     }
-    L = L / max(1.f, nhits);
+    L =  L * light.area() / (float) samplePoints.size();
   }
   return L;
 }
@@ -183,6 +193,7 @@ RTCRay rayThroughPixel(int i, int j, Camera camera) {
   float aspectRatio = camera.width/camera.height;
 
   float jrand = genRandomFloat(), irand = genRandomFloat();
+  // TODO: perform anti aliasing by sampling inside the pixel.
   jrand = 0.5, irand = 0.5;
 
   float alpha = aspectRatio * tan(camera.fovy/2)*(j + jrand - camera.width/2)/(camera.width/2);
@@ -199,7 +210,7 @@ int main()
    * our errorFunction. */
   RTCDevice device = initializeDevice();
 
-  bool enableBasic = false;
+  bool enableBasic = true;
   string basicPath = enableBasic ? "/basic" : "";
 
   vector<string> objFileNames;
@@ -220,20 +231,20 @@ int main()
   Light light = readLightFile((BASE_PATH + "data" + basicPath +"/light.txt").c_str());
 
   int h = camera.height, w = camera.width;
-  BYTE image[h][w*3];
+  unsigned char image[h][w*3];
 
   for (int i = 0; i < h; ++i) {
     for (int j = 0; j < w; ++j) {
       RTCRay incray = rayThroughPixel(i, j, camera);
 
-      // shoot multiple rays for anti-aliasing
       Vec3f color = castRay(scene, objects, light, incray);
+      color = Vec3f(pow(color.x, 1/2.2f),  pow(color.y, 1/2.2f), pow(color.z, 1/2.2f));
       color = scaleColor(reverse(color));
 
       // set color in BGR format
-      image[i][j*3+0] = color.x;
-      image[i][j*3+1] = color.y;
-      image[i][j*3+2] = color.z;
+      image[i][j*3+0] = min( color.x, 255.f);
+      image[i][j*3+1] = min( color.y, 255.f);
+      image[i][j*3+2] = min( color.z, 255.f);
 
     }
   }

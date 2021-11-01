@@ -38,11 +38,21 @@ class Vec3f {
       return this->x*vec.x + this->y*vec.y + this->z*vec.z;
     }
 
+    float dotClamp(const Vec3f& vec) {
+      return std::max(dot(vec), 0.0f);
+    }
+
+    std::vector<float> vectorF() {
+      return std::vector<float> {this->x, this->y, this->z};
+    }
+
     Vec3f operator+(const Vec3f& vec);
 
     Vec3f operator-(const Vec3f& vec);
 
     Vec3f operator*(const Vec3f& vec);
+
+
 
     std::string to_string() {
       return std::to_string(this->x) + ", " + std::to_string(this->y) + ", " + std::to_string(this->z);
@@ -106,28 +116,34 @@ public:
 
 class Light {
   public:
-    Vec3f point, I;
+    Vec3f point, I, normal;
     RTCRay edge1, edge2;
     Light(){}
     Light(Vec3f a, Vec3f b, Vec3f c, Vec3f I) {
       this->point = a;
-      this->edge1 = createRay(a, b - a, 0, norm(b - a));
-      this->edge2 = createRay(a, c - a, 0, norm(c - a));
+//      this->edge1 = createRay(a, b - a, 0, norm(b - a));
+//      this->edge2 = createRay(a, c - a, 0, norm(c - a));
+      setEdge1(a, b);
+      setEdge2(a, c);
+      setNormal();
       this->I = I;
     }
     Light(Vec3f a, RTCRay edge1, RTCRay edge2, Vec3f I) {
       this->point = a;
       this->edge1 = edge1;
       this->edge2 = edge2;
+      setNormal();
       this->I = I;
     }
     std::vector<Vec3f> samplePoints(bool stratified, int numOfSamples = 9);
 
     Vec3f samplePoint();
 
-
+    void setNormal();
     void setEdge1(Vec3f a, Vec3f b);
     void setEdge2(Vec3f a, Vec3f c);
+
+    float area();
 };
 
 using std::vector;
@@ -150,13 +166,16 @@ vector<Vec3f> sampleOverHemisphere(Vec3f normal, int numOfSamples=9);
 
 class ObjMesh {
 public:
-  vector<vector<float>> vertex;
-  vector<vector<float>> vnormal;
-  vector<vector<float >> vertindex;
-  vector<vector<float >> vnormindex;
+  // TODO : use a vector of Vec3f instead of vector<vector>
+  vector<Vec3f> vertex;
+  vector<Vec3f> vnormal;
+  vector<Vec3f> vertindex;
+  vector<Vec3f> vnormindex;
   Material material;
 };
 
 Material findMaterialByName(vector<Material> materials, string name);
+
+Vec3f barycentricTo3d(RTCHit rtcHit, ObjMesh objMesh);
 
 

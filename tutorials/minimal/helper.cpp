@@ -164,12 +164,25 @@ std::vector<Vec3f> Light::samplePoints(bool stratified, int numOfSamples) {
   return samples;
 }
 
+void Light::setNormal() {
+  this->normal = cross(getDir(this->edge1), getDir(this->edge2));
+}
+
 void Light::setEdge1(Vec3f a, Vec3f b) {
   this->edge1 = createRay(a, b - a, 0, norm(b - a));
 }
 
 void Light::setEdge2(Vec3f a, Vec3f c) {
   this->edge2 = createRay(a, c - a, 0, norm(c - a));
+  setNormal();
+}
+
+float Light::area() {
+  float base = this->edge1.tfar;
+  float theta = acos(normalize(getDir(this->edge1)).dot(normalize(getDir(this->edge2))));
+  float height = this->edge2.tfar * sin(theta);
+  // area of parallelogram
+  return base * height;
 }
 
 vector<Vec3f> sampleOverHemisphere(Vec3f normal, int numOfSamples) {
@@ -204,4 +217,12 @@ Material findMaterialByName(vector<Material> materials, string name) {
     }
   }
   return material;
+}
+
+Vec3f barycentricTo3d(RTCHit rtcHit, ObjMesh objMesh) {
+  unsigned int primId = rtcHit.primID;
+  Vec3f a = objMesh.vertex[primId];
+  Vec3f b = objMesh.vertex[primId+1];
+  Vec3f c = objMesh.vertex[primId+2];
+  return a + rtcHit.u * (b - a) + rtcHit.v * (c - a);
 }
