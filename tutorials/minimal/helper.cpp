@@ -115,7 +115,7 @@ Vec3f getSurfNormal(RTCHit hit) {
 RTCRay createRay(Vec3f org, Vec3f dir, float tnear, float tfar) {
   RTCRay ray;
   setOrigin(ray, org);
-  setDir(ray, dir);
+  setDir(ray, normalize(dir));
   ray.tnear = tnear; ray.tfar = tfar;
   return ray;
 }

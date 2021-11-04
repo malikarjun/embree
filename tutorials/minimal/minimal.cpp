@@ -136,7 +136,6 @@ Vec3f computeLight(RTCRayHit rayHit, Light light, ObjMesh& objMesh, Vec3f lightL
 //  Vec3f hitPoint1 = barycentricTo3d(rayHit.hit, objMesh);
 //  float dist1 = norm(hitPoint1 - lightLoc);
   float ldot = lightNormal.dotClamp(srayDir);
-  surfNormal.x = max(0.f, surfNormal.x);
 
   lambert = (light.I * material * surfNormal.dotClamp(srayDir) * ldot) / (dist * dist);
   return lambert;
@@ -170,7 +169,7 @@ Vec3f castRay(RTCScene scene, vector<ObjMesh> objects, Light light, RTCRay rtcRa
     // create a ray to the light source
     Vec3f hitPoint = getOrigin(rayhit.ray) + rayhit.ray.tfar * getDir(rayhit.ray);
     Vec3f surfNormal = getSurfNormal(rayhit.hit);
-    vector<Vec3f> samplePoints = light.samplePoints(false, 500);
+    vector<Vec3f> samplePoints = light.samplePoints(true, 50);
 
     for (Vec3f lightSample : samplePoints) {
       RTCRay shadowRay = createRay(hitPoint, lightSample - hitPoint, 0.001, numeric_limits<float>::infinity());
@@ -237,7 +236,7 @@ int main()
       RTCRay incray = rayThroughPixel(i, j, camera);
 
       Vec3f color = castRay(scene, objects, light, incray);
-      color = Vec3f(pow(color.x, 1/2.2f),  pow(color.y, 1/2.2f), pow(color.z, 1/2.2f));
+//      color = Vec3f(pow(color.x, 1/2.2f),  pow(color.y, 1/2.2f), pow(color.z, 1/2.2f));
       color = scaleColor(reverse(color));
 
       // set color in BGR format
