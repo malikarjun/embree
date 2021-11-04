@@ -123,11 +123,11 @@ Vec3f computeLight(Vec3f ldirection, Material material, Vec3f surfNormal, Vec3f 
   return lambert;
 }
 
-Vec3f computeLight(RTCRayHit rayHit, Light light, ObjMesh& objMesh, Vec3f lightLoc, Vec3f incDir) {
+Vec3f computeLight(RTCRayHit rayHit, Light light, ObjMesh& objMesh, Vec3f lightLoc, Vec3f srayDir) {
   Vec3f lambert;
   Vec3f surfNormal = getSurfNormal(rayHit.hit);
   Vec3f material = objMesh.material.diffuse;
-  incDir = normalize(incDir);
+  srayDir = normalize(srayDir);
 
   Vec3f lightNormal = normalize(light.normal);
   Vec3f hitPoint = getOrigin(rayHit.ray) + rayHit.ray.tfar * getDir(rayHit.ray);
@@ -135,9 +135,10 @@ Vec3f computeLight(RTCRayHit rayHit, Light light, ObjMesh& objMesh, Vec3f lightL
 
 //  Vec3f hitPoint1 = barycentricTo3d(rayHit.hit, objMesh);
 //  float dist1 = norm(hitPoint1 - lightLoc);
-  float ldot = lightNormal.dotClamp(incDir);
+  float ldot = lightNormal.dotClamp(srayDir);
+  surfNormal.x = max(0.f, surfNormal.x);
 
-  lambert = light.I * material * surfNormal.dotClamp(incDir) * ldot / (dist * dist);
+  lambert = (light.I * material * surfNormal.dotClamp(srayDir) * ldot) / (dist * dist);
   return lambert;
 }
 
@@ -169,9 +170,7 @@ Vec3f castRay(RTCScene scene, vector<ObjMesh> objects, Light light, RTCRay rtcRa
     // create a ray to the light source
     Vec3f hitPoint = getOrigin(rayhit.ray) + rayhit.ray.tfar * getDir(rayhit.ray);
     Vec3f surfNormal = getSurfNormal(rayhit.hit);
-//    vector<Vec3f> samplePoints = sampleOverHemisphere(surfNormal, 9);
-    // TODO: why is sampling over hemisphere not working?
-    vector<Vec3f> samplePoints = light.samplePoints(true, 100);
+    vector<Vec3f> samplePoints = light.samplePoints(false, 500);
 
     for (Vec3f lightSample : samplePoints) {
       RTCRay shadowRay = createRay(hitPoint, lightSample - hitPoint, 0.001, numeric_limits<float>::infinity());
@@ -210,7 +209,7 @@ int main()
    * our errorFunction. */
   RTCDevice device = initializeDevice();
 
-  bool enableBasic = true;
+  bool enableBasic = false;
   string basicPath = enableBasic ? "/basic" : "";
 
   vector<string> objFileNames;

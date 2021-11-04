@@ -134,8 +134,7 @@ void Camera::setUpCameraCoordFrame() {
 
 Vec3f Light::samplePoint() {
   float u = genRandomFloat(), v = genRandomFloat();
-  Vec3f samplePoint = this->point +  u * edge1.tfar * Vec3f(this->edge1.dir_x, this->edge1.dir_y, this->edge1.dir_z) +
-                      v * edge2.tfar * Vec3f(this->edge2.dir_x, this->edge2.dir_y, this->edge2.dir_z);
+  Vec3f samplePoint = this->point +  u * edge1.tfar * getDir(this->edge1) + v * edge2.tfar * getDir(this->edge2);
   return samplePoint;
 }
 
@@ -145,15 +144,15 @@ std::vector<Vec3f> Light::samplePoints(bool stratified, int numOfSamples) {
 
   if (stratified) {
     int rn = sqrt(numOfSamples);
-    float e1_step = this->edge1.tfar/rn, e2_step = this->edge2.tfar/rn;
+    float e1Step = this->edge1.tfar / rn, e2Step = this->edge2.tfar / rn;
 
     for(int i = 0; i < rn; ++i) {
       for (int j = 0; j < rn; ++j) {
-        Vec3f a = this->point + i * e1_step * getDir(this->edge1) + j * e2_step * getDir(this->edge2);
-        RTCRay edge1 = createRay(a, getDir(this->edge1), 0, e1_step);
-        RTCRay edge2 = createRay(a, getDir(this->edge2), 0, e2_step);
-        Light local_light(a, edge1, edge2, this->I);
-        samples.push_back(local_light.samplePoint());
+        Vec3f a = this->point + i * e1Step * getDir(this->edge1) + j * e2Step * getDir(this->edge2);
+        RTCRay edge1 = createRay(a, getDir(this->edge1), 0, e1Step);
+        RTCRay edge2 = createRay(a, getDir(this->edge2), 0, e2Step);
+        Light localLight(a, edge1, edge2, this->I);
+        samples.push_back(localLight.samplePoint());
       }
     }
   } else {
