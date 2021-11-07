@@ -120,6 +120,17 @@ RTCRay createRay(Vec3f org, Vec3f dir, float tnear, float tfar) {
   return ray;
 }
 
+RTCRayHit createRayHit(Vec3f org, Vec3f dir, float tnear, float tfar) {
+  RTCRayHit rayHit;
+  rayHit.ray = createRay(org, dir, tnear, tfar);
+  rayHit.ray.mask = -1;
+  rayHit.ray.flags = 0;
+  rayHit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
+  rayHit.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
+
+  return rayHit;
+}
+
 void Camera::setFovy(float fovy) {
   this->fovy = degToRadian(fovy);
 }
@@ -134,8 +145,19 @@ void Camera::setUpCameraCoordFrame() {
 
 Vec3f Light::samplePoint() {
   float u = genRandomFloat(), v = genRandomFloat();
-  Vec3f samplePoint = this->point +  u * edge1.tfar * getDir(this->edge1) + v * edge2.tfar * getDir(this->edge2);
+  Vec3f samplePoint = this->origin + u * edge1.tfar * getDir(this->edge1) + v * edge2.tfar * getDir(this->edge2);
   return samplePoint;
+}
+
+Vec3f Light::strength(Vec3f target) {
+  float dist = norm(this->center - target);
+  float strength = exp( -0.5 * (dist * dist)/ ( this->sigma *  this->sigma));
+  return this->I * strength;
+}
+
+void Light::init() {
+  this->setNormal();
+  this->setCenter();
 }
 
 std::vector<Vec3f> Light::samplePoints(bool stratified, int numOfSamples) {
@@ -148,7 +170,7 @@ std::vector<Vec3f> Light::samplePoints(bool stratified, int numOfSamples) {
 
     for(int i = 0; i < rn; ++i) {
       for (int j = 0; j < rn; ++j) {
-        Vec3f a = this->point + i * e1Step * getDir(this->edge1) + j * e2Step * getDir(this->edge2);
+        Vec3f a = this->origin + i * e1Step * getDir(this->edge1) + j * e2Step * getDir(this->edge2);
         RTCRay edge1 = createRay(a, getDir(this->edge1), 0, e1Step);
         RTCRay edge2 = createRay(a, getDir(this->edge2), 0, e2Step);
         Light localLight(a, edge1, edge2, this->I);
@@ -161,6 +183,11 @@ std::vector<Vec3f> Light::samplePoints(bool stratified, int numOfSamples) {
     }
   }
   return samples;
+}
+
+void Light::setCenter() {
+  this->center = this->origin + getDir(this->edge1) * this->edge1.tfar/2 +
+      getDir(this->edge2) * this->edge2.tfar/2;
 }
 
 void Light::setNormal() {
@@ -178,7 +205,7 @@ void Light::setEdge2(Vec3f a, Vec3f c) {
 
 float Light::area() {
   float base = this->edge1.tfar;
-  float theta = acos(normalize(getDir(this->edge1)).dot(normalize(getDir(this->edge2))));
+  float theta = acos(getDir(this->edge1).dot(getDir(this->edge2)));
   float height = this->edge2.tfar * sin(theta);
   // area of parallelogram
   return base * height;

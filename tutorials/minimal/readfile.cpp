@@ -169,17 +169,20 @@ Light readLightFile (const char * filename) {
       stringstream s(str);
       s >> cmd;
       if (cmd == "a" ) {
-        light.point = vectToVec3f(readValues(s));
+        light.origin = vectToVec3f(readValues(s));
       } else if (cmd == "b" )  {
-        light.setEdge1(light.point, vectToVec3f(readValues(s)));
+        light.setEdge1(light.origin, vectToVec3f(readValues(s)));
       } else if (cmd == "c" )  {
-        light.setEdge2(light.point, vectToVec3f(readValues(s)));
+        light.setEdge2(light.origin, vectToVec3f(readValues(s)));
       } else if (cmd == "i" )  {
         light.I = vectToVec3f(readValues(s));
+      } else if (cmd == "sigma") {
+        light.sigma = readValues(s)[0];
       }
       getline (in, str);
     }
   }
+  light.init();
   return light;
 }
 

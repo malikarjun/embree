@@ -114,31 +114,17 @@ RTCScene initializeScene(RTCDevice device, vector<ObjMesh> objects)
   return scene;
 }
 
-Vec3f computeLight(Vec3f ldirection, Material material, Vec3f surfNormal, Vec3f lightColor) {
-  ldirection = normalize(ldirection);
-  surfNormal = normalize(surfNormal);
-  float nDotL = ldirection.dot(surfNormal);
-  Vec3f lambert = material.diffuse * lightColor * max (nDotL, 0.0f);
-
-  return lambert;
-}
-
 Vec3f computeLight(RTCRayHit rayHit, Light light, ObjMesh& objMesh, Vec3f lightLoc, Vec3f srayDir) {
   Vec3f lambert;
   Vec3f surfNormal = getSurfNormal(rayHit.hit);
-  Vec3f material = objMesh.material.diffuse;
-  srayDir = normalize(srayDir);
+  Vec3f material = objMesh.material.diffuse / M_PI;
+  Vec3f lightI = light.strength(lightLoc);
 
   Vec3f lightNormal = normalize(light.normal);
   Vec3f hitPoint = getOrigin(rayHit.ray) + rayHit.ray.tfar * getDir(rayHit.ray);
   float dist = norm(hitPoint - lightLoc);
-
-//  Vec3f hitPoint1 = barycentricTo3d(rayHit.hit, objMesh);
-//  float dist1 = norm(hitPoint1 - lightLoc);
-  float ldot = lightNormal.dotClamp(srayDir);
-
-  lambert = (light.I * material * surfNormal.dotClamp(srayDir) * ldot) / (dist * dist);
-  return lambert;
+  lambert = (lightI * material * surfNormal.dotClamp(srayDir) * lightNormal.dotClamp(srayDir)) / (dist * dist);
+  return objMesh.material.ambient + lambert;
 }
 
 
@@ -147,37 +133,24 @@ Vec3f castRay(RTCScene scene, vector<ObjMesh> objects, Light light, RTCRay rtcRa
   struct RTCIntersectContext context;
   rtcInitIntersectContext(&context);
 
-  struct RTCRayHit rayhit;
-  rayhit.ray.org_x = rtcRay.org_x;
-  rayhit.ray.org_y = rtcRay.org_y;
-  rayhit.ray.org_z = rtcRay.org_z;
-  rayhit.ray.dir_x = rtcRay.dir_x;
-  rayhit.ray.dir_y = rtcRay.dir_y;
-  rayhit.ray.dir_z = rtcRay.dir_z;
-  rayhit.ray.tnear = 0;
-  rayhit.ray.tfar = std::numeric_limits<float>::infinity();
-  rayhit.ray.mask = -1;
-  rayhit.ray.flags = 0;
-  rayhit.hit.geomID = RTC_INVALID_GEOMETRY_ID;
-  rayhit.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
-
+  RTCRayHit rayhit = createRayHit(getOrigin(rtcRay), getDir(rtcRay));
   rtcIntersect1(scene, &context, &rayhit);
 
   Vec3f L(0);
 
   if (rayhit.hit.geomID != RTC_INVALID_GEOMETRY_ID) {
-    // create a ray to the light source
     Vec3f hitPoint = getOrigin(rayhit.ray) + rayhit.ray.tfar * getDir(rayhit.ray);
-    Vec3f surfNormal = getSurfNormal(rayhit.hit);
-    vector<Vec3f> samplePoints = light.samplePoints(true, 50);
+    vector<Vec3f> samplePoints = light.samplePoints(true, 9);
 
     for (Vec3f lightSample : samplePoints) {
-      RTCRay shadowRay = createRay(hitPoint, lightSample - hitPoint, 0.001, numeric_limits<float>::infinity());
-      rtcOccluded1(scene, &context, &shadowRay);
-      // if hit is not found, that means the surface is not occluded from light source
-      if (shadowRay.tfar >= 0) {
-//        L = L + computeLight(getDir(shadowRay), objects[rayhit.hit.geomID].material, surfNormal, light.I);
-        L = L + computeLight(rayhit, light, objects[rayhit.hit.geomID], lightSample, getDir(shadowRay));
+      RTCRayHit shadowRayHit = createRayHit(hitPoint, lightSample - hitPoint, 0.001);
+      rtcIntersect1(scene, &context, &shadowRayHit);
+      float distToLight = norm(lightSample - hitPoint);
+      // light intensity would be computed for the following scenarios
+      // 1. if no occlusion found
+      // 2. occlusion found but distToOcclusion is greater than distToLight
+      if (shadowRayHit.hit.geomID == RTC_INVALID_GEOMETRY_ID || shadowRayHit.ray.tfar >= distToLight) {
+        L = L + computeLight(rayhit, light, objects[rayhit.hit.geomID], lightSample, getDir(shadowRayHit.ray));
       }
     }
     L =  L * light.area() / (float) samplePoints.size();
@@ -197,10 +170,24 @@ RTCRay rayThroughPixel(int i, int j, Camera camera) {
   float alpha = aspectRatio * tan(camera.fovy/2)*(j + jrand - camera.width/2)/(camera.width/2);
   float beta = tan(camera.fovy/2)*(i + irand - camera.height/2)/(camera.height/2);
   setDir(ray, normalize(alpha*camera.u + beta*camera.v - camera.w));
+  ray.tfar = std::numeric_limits<float>::infinity();
   return ray;
 }
 
 /* -------------------------------------------------------------------------- */
+
+/*int main() {
+  Vec3f pos = Vec3f(-4.5, 16, 8);
+  Vec3f pos1 = Vec3f(1.5, 16, 8);
+  Vec3f pos2 = Vec3f(-4.5, 21.8284, 3.8284);
+  Vec3f axis1 = pos1-pos;
+  Vec3f axis2 = pos2-pos;
+
+  Vec3f cross_prod = cross(axis1,axis2);
+  float _sigma = sqrt(norm(cross_prod)/4.0f);
+  cout << "Light sigma is " << _sigma << endl;
+  return 0;
+}*/
 
 int main()
 {
@@ -213,9 +200,11 @@ int main()
 
   vector<string> objFileNames;
   if (enableBasic) {
-    objFileNames = {"data" + basicPath + "/floor.obj"};
+    objFileNames = {"data" + basicPath + "/floor.obj"
+//                    , "data" + basicPath + "/light.obj"
+    };
   } else {
-    objFileNames = {"data" + basicPath + "/floor.obj", "data/grid1.obj"};
+    objFileNames = {"data/floor.obj", "data/grid1.obj"};
   }
 
   vector<ObjMesh> objects;
@@ -234,6 +223,10 @@ int main()
   for (int i = 0; i < h; ++i) {
     for (int j = 0; j < w; ++j) {
       RTCRay incray = rayThroughPixel(i, j, camera);
+
+      if (j == 320 && i == 100) {
+        incray = rayThroughPixel(i, j, camera);
+      }
 
       Vec3f color = castRay(scene, objects, light, incray);
 //      color = Vec3f(pow(color.x, 1/2.2f),  pow(color.y, 1/2.2f), pow(color.z, 1/2.2f));

@@ -10,6 +10,7 @@
 #include <limits>
 #include <random>
 #include <string>
+#include <math.h>
 
 using std::cos;
 using std::sin;
@@ -91,6 +92,8 @@ Vec3f getSurfNormal(RTCHit hit);
 
 RTCRay createRay(Vec3f org, Vec3f dir, float tnear = 0.0001, float tfar = std::numeric_limits<float>::infinity());
 
+RTCRayHit createRayHit(Vec3f org, Vec3f dir, float tnear = 0.0001, float tfar = std::numeric_limits<float>::infinity());
+
 class Camera {
 public:
   Vec3f eye, center, up;
@@ -116,29 +119,34 @@ public:
 
 class Light {
   public:
-    Vec3f point, I, normal;
+    Vec3f origin, I, normal, center;
+    // sigma is the std dev of the gaussian area light
+    float sigma;
     RTCRay edge1, edge2;
     Light(){}
     Light(Vec3f a, Vec3f b, Vec3f c, Vec3f I) {
-      this->point = a;
-//      this->edge1 = createRay(a, b - a, 0, norm(b - a));
-//      this->edge2 = createRay(a, c - a, 0, norm(c - a));
+      this->origin = a;
       setEdge1(a, b);
       setEdge2(a, c);
-      setNormal();
       this->I = I;
     }
     Light(Vec3f a, RTCRay edge1, RTCRay edge2, Vec3f I) {
-      this->point = a;
+      this->origin = a;
       this->edge1 = edge1;
       this->edge2 = edge2;
-      setNormal();
       this->I = I;
     }
+
+    // sets up the normal and the central location of the area light.
+    void init();
+
     std::vector<Vec3f> samplePoints(bool stratified, int numOfSamples = 9);
 
     Vec3f samplePoint();
 
+    Vec3f strength(Vec3f target);
+
+    void setCenter();
     void setNormal();
     void setEdge1(Vec3f a, Vec3f b);
     void setEdge2(Vec3f a, Vec3f c);

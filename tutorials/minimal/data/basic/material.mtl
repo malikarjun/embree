@@ -7,3 +7,8 @@ newmtl white
 Ka 0 0 0
 Kd 0.3 0.3 0.5
 Ks 0 0 0
+
+newmtl light
+Ka 1 1 1
+Kd 0 0 0
+Ks 0 0 0
