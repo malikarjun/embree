@@ -184,6 +184,4 @@ public:
 
 Material findMaterialByName(vector<Material> materials, string name);
 
-Vec3f barycentricTo3d(RTCHit rtcHit, ObjMesh objMesh);
-
 

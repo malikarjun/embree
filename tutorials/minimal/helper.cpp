@@ -245,10 +245,3 @@ Material findMaterialByName(vector<Material> materials, string name) {
   return material;
 }
 
-Vec3f barycentricTo3d(RTCHit rtcHit, ObjMesh objMesh) {
-  unsigned int primId = rtcHit.primID;
-  Vec3f a = objMesh.vertex[primId];
-  Vec3f b = objMesh.vertex[primId+1];
-  Vec3f c = objMesh.vertex[primId+2];
-  return a + rtcHit.u * (b - a) + rtcHit.v * (c - a);
-}
