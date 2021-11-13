@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <FreeImage.h>
 #include "readfile.h"
+#include "aaf_helper.h"
 
 
 #if defined(_WIN32)
@@ -114,21 +115,23 @@ RTCScene initializeScene(RTCDevice device, vector<ObjMesh> objects)
   return scene;
 }
 
-Vec3f computeLight(RTCRayHit rayHit, Light light, ObjMesh& objMesh, Vec3f lightLoc, Vec3f srayDir) {
-  Vec3f lambert;
+Vec3f computeBrdf(RTCRayHit rayHit, Light light, ObjMesh& objMesh, Vec3f lightLoc, Vec3f srayDir) {
+  Vec3f color;
   Vec3f surfNormal = getSurfNormal(rayHit.hit);
   Vec3f material = objMesh.material.diffuse / M_PI;
   Vec3f lightI = light.strength(lightLoc);
-
   Vec3f lightNormal = normalize(light.normal);
   Vec3f hitPoint = getOrigin(rayHit.ray) + rayHit.ray.tfar * getDir(rayHit.ray);
   float dist = norm(hitPoint - lightLoc);
-  lambert = (lightI * material * surfNormal.dotClamp(srayDir) * lightNormal.dotClamp(srayDir)) / (dist * dist);
-  return objMesh.material.ambient + lambert;
+
+  // TODO : compute Phong term along with diffuse term
+
+  color = (lightI * material * surfNormal.dotClamp(srayDir) * lightNormal.dotClamp(srayDir)) / (dist * dist);
+  return objMesh.material.ambient + color;
 }
 
 
-Vec3f castRay(RTCScene scene, vector<ObjMesh> objects, Light light, RTCRay rtcRay)
+Vec3f castRay(RTCScene scene, vector<ObjMesh> objects, Light light, RTCRay rtcRay, AAFParam &aafParam)
 {
   struct RTCIntersectContext context;
   rtcInitIntersectContext(&context);
@@ -136,11 +139,11 @@ Vec3f castRay(RTCScene scene, vector<ObjMesh> objects, Light light, RTCRay rtcRa
   RTCRayHit rayhit = createRayHit(getOrigin(rtcRay), getDir(rtcRay));
   rtcIntersect1(scene, &context, &rayhit);
 
-  Vec3f L(0);
+  Vec3f brdf(0);
 
   if (rayhit.hit.geomID != RTC_INVALID_GEOMETRY_ID) {
     Vec3f hitPoint = getOrigin(rayhit.ray) + rayhit.ray.tfar * getDir(rayhit.ray);
-    vector<Vec3f> samplePoints = light.samplePoints(true, 9);
+    vector<Vec3f> samplePoints = light.samplePoints(true, 16);
 
     for (Vec3f lightSample : samplePoints) {
       RTCRayHit shadowRayHit = createRayHit(hitPoint, lightSample - hitPoint, 0.001);
@@ -150,12 +153,12 @@ Vec3f castRay(RTCScene scene, vector<ObjMesh> objects, Light light, RTCRay rtcRa
       // 1. if no occlusion found
       // 2. occlusion found but distToOcclusion is greater than distToLight
       if (shadowRayHit.hit.geomID == RTC_INVALID_GEOMETRY_ID || shadowRayHit.ray.tfar >= distToLight) {
-        L = L + computeLight(rayhit, light, objects[rayhit.hit.geomID], lightSample, getDir(shadowRayHit.ray));
+        brdf = brdf + computeBrdf(rayhit, light, objects[rayhit.hit.geomID], lightSample, getDir(shadowRayHit.ray));
       }
     }
-    L =  L * light.area() / (float) samplePoints.size();
+    brdf = brdf * light.area() / (float) samplePoints.size();
   }
-  return L;
+  return brdf;
 }
 
 RTCRay rayThroughPixel(int i, int j, Camera camera) {
@@ -175,19 +178,47 @@ RTCRay rayThroughPixel(int i, int j, Camera camera) {
 }
 
 /* -------------------------------------------------------------------------- */
+/*
 
-/*int main() {
-  Vec3f pos = Vec3f(-4.5, 16, 8);
-  Vec3f pos1 = Vec3f(1.5, 16, 8);
-  Vec3f pos2 = Vec3f(-4.5, 21.8284, 3.8284);
-  Vec3f axis1 = pos1-pos;
-  Vec3f axis2 = pos2-pos;
+void print2d(int** img) {
+  for (int i = 0; i < 2; ++i) {
+    for (int j = 0; j < 2; ++j) {
+      cout << img[i][j] << endl;
+    }
+  }
+}
 
-  Vec3f cross_prod = cross(axis1,axis2);
-  float _sigma = sqrt(norm(cross_prod)/4.0f);
-  cout << "Light sigma is " << _sigma << endl;
-  return 0;
-}*/
+void alloc_mem(int*** img, int h, int w) {
+  *img = new int*[h];
+  for (int i = 0; i < h; ++i) {
+    (*img)[i] = new int [w];
+  }
+}
+
+int main() {
+//  Vec3f pos = Vec3f(-4.5, 16, 8);
+//  Vec3f pos1 = Vec3f(1.5, 16, 8);
+//  Vec3f pos2 = Vec3f(-4.5, 21.8284, 3.8284);
+//  Vec3f axis1 = pos1-pos;
+//  Vec3f axis2 = pos2-pos;
+//
+//  Vec3f cross_prod = cross(axis1,axis2);
+//  float _sigma = sqrt(norm(cross_prod)/4.0f);
+//  cout << "Light sigma is " << _sigma << endl;
+//  return 0;
+  int **img;
+
+  int h = 640, w = 480;
+  alloc_mem(&img, h, w);
+
+  img[0][0] = 1;
+  img[0][1] = 2;
+  img[1][0] = 3;
+  img[1][1] = 4;
+
+  print2d(img);
+}
+*/
 
 int main()
 {
@@ -220,18 +251,17 @@ int main()
   int h = camera.height, w = camera.width;
   unsigned char image[h][w*3];
 
+  AAFParam aafParam(h, w);
+
   for (int i = 0; i < h; ++i) {
     for (int j = 0; j < w; ++j) {
       RTCRay incray = rayThroughPixel(i, j, camera);
 
-      if (j == 320 && i == 100) {
-        incray = rayThroughPixel(i, j, camera);
-      }
+      Vec3f color = castRay(scene, objects, light, incray, aafParam);
+//      Vec3f color = castRay(scene, objects, light, incray);
 
-      Vec3f color = castRay(scene, objects, light, incray);
-//      color = Vec3f(pow(color.x, 1/2.2f),  pow(color.y, 1/2.2f), pow(color.z, 1/2.2f));
+      color = Vec3f(pow(color.x, 1/2.2f),  pow(color.y, 1/2.2f), pow(color.z, 1/2.2f));
       color = scaleColor(reverse(color));
-
       // set color in BGR format
       image[i][j*3+0] = min( color.x, 255.f);
       image[i][j*3+1] = min( color.y, 255.f);

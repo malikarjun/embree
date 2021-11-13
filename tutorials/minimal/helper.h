@@ -5,7 +5,6 @@
 #ifndef EMBREE3_LIGHT_H
 #define EMBREE3_LIGHT_H
 
-#endif //EMBREE3_LIGHT_H
 #include <embree3/rtcore.h>
 #include <limits>
 #include <random>
@@ -22,42 +21,42 @@ float genRandomFloat();
 
 
 class Vec3f {
-  public:
-    float x,y,z;
-    Vec3f() {}
-    Vec3f(float val) {
-      this->x = val, this->y = val; this->z = val;
-    }
-    Vec3f(float x, float y, float z) {
-      this->x = x, this->y = y, this->z = z;
-    }
-    float norm() {
-      return sqrt(this->x*this->x + this->y*this->y + this->z*this->z);
-    }
+public:
+  float x,y,z;
+  Vec3f() {}
+  Vec3f(float val) {
+    this->x = val, this->y = val; this->z = val;
+  }
+  Vec3f(float x, float y, float z) {
+    this->x = x, this->y = y, this->z = z;
+  }
+  float norm() {
+    return sqrt(this->x*this->x + this->y*this->y + this->z*this->z);
+  }
 
-    float dot(const Vec3f& vec) {
-      return this->x*vec.x + this->y*vec.y + this->z*vec.z;
-    }
+  float dot(const Vec3f& vec) {
+    return this->x*vec.x + this->y*vec.y + this->z*vec.z;
+  }
 
-    float dotClamp(const Vec3f& vec) {
-      return std::max(dot(vec), 0.0f);
-    }
+  float dotClamp(const Vec3f& vec) {
+    return std::max(dot(vec), 0.0f);
+  }
 
-    std::vector<float> vectorF() {
-      return std::vector<float> {this->x, this->y, this->z};
-    }
+  std::vector<float> vectorF() {
+    return std::vector<float> {this->x, this->y, this->z};
+  }
 
-    Vec3f operator+(const Vec3f& vec);
+  Vec3f operator+(const Vec3f& vec);
 
-    Vec3f operator-(const Vec3f& vec);
+  Vec3f operator-(const Vec3f& vec);
 
-    Vec3f operator*(const Vec3f& vec);
+  Vec3f operator*(const Vec3f& vec);
 
 
 
-    std::string to_string() {
-      return std::to_string(this->x) + ", " + std::to_string(this->y) + ", " + std::to_string(this->z);
-    }
+  std::string to_string() {
+    return std::to_string(this->x) + ", " + std::to_string(this->y) + ", " + std::to_string(this->z);
+  }
 };
 
 float getMaxVal(Vec3f vec);
@@ -99,7 +98,7 @@ public:
   Vec3f eye, center, up;
   // fovy should be in radians
   float fovy;
-  // image width and height TODO: should this be here?
+  // image width and height
   float width, height;
 
   // camera coordinate frame
@@ -118,40 +117,40 @@ public:
 };
 
 class Light {
-  public:
-    Vec3f origin, I, normal, center;
-    // sigma is the std dev of the gaussian area light
-    float sigma;
-    RTCRay edge1, edge2;
-    Light(){}
-    Light(Vec3f a, Vec3f b, Vec3f c, Vec3f I) {
-      this->origin = a;
-      setEdge1(a, b);
-      setEdge2(a, c);
-      this->I = I;
-    }
-    Light(Vec3f a, RTCRay edge1, RTCRay edge2, Vec3f I) {
-      this->origin = a;
-      this->edge1 = edge1;
-      this->edge2 = edge2;
-      this->I = I;
-    }
+public:
+  Vec3f origin, I, normal, center;
+  // sigma is the std dev of the gaussian area light
+  float sigma;
+  RTCRay edge1, edge2;
+  Light(){}
+  Light(Vec3f a, Vec3f b, Vec3f c, Vec3f I) {
+    this->origin = a;
+    setEdge1(a, b);
+    setEdge2(a, c);
+    this->I = I;
+  }
+  Light(Vec3f a, RTCRay edge1, RTCRay edge2, Vec3f I) {
+    this->origin = a;
+    this->edge1 = edge1;
+    this->edge2 = edge2;
+    this->I = I;
+  }
 
-    // sets up the normal and the central location of the area light.
-    void init();
+  // sets up the normal and the central location of the area light.
+  void init();
 
-    std::vector<Vec3f> samplePoints(bool stratified, int numOfSamples = 9);
+  std::vector<Vec3f> samplePoints(bool stratified, int numOfSamples = 9);
 
-    Vec3f samplePoint();
+  Vec3f samplePoint();
 
-    Vec3f strength(Vec3f target);
+  Vec3f strength(Vec3f target);
 
-    void setCenter();
-    void setNormal();
-    void setEdge1(Vec3f a, Vec3f b);
-    void setEdge2(Vec3f a, Vec3f c);
+  void setCenter();
+  void setNormal();
+  void setEdge1(Vec3f a, Vec3f b);
+  void setEdge2(Vec3f a, Vec3f c);
 
-    float area();
+  float area();
 };
 
 using std::vector;
@@ -174,7 +173,6 @@ vector<Vec3f> sampleOverHemisphere(Vec3f normal, int numOfSamples=9);
 
 class ObjMesh {
 public:
-  // TODO : use a vector of Vec3f instead of vector<vector>
   vector<Vec3f> vertex;
   vector<Vec3f> vnormal;
   vector<Vec3f> vertindex;
@@ -185,3 +183,4 @@ public:
 Material findMaterialByName(vector<Material> materials, string name);
 
 
+#endif //EMBREE3_LIGHT_H
