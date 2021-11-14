@@ -18,10 +18,24 @@ using std::acos;
 
 float genRandomFloat();
 
+class Vec2f {
+public:
+  float x,y;
+  Vec2f() {}
+  Vec2f(float val) : x(val), y(val) {
+  }
+  Vec2f(float x, float y) : x(x), y(y){
+  }
 
+  Vec2f operator+(const Vec2f& vec);
+
+  Vec2f& operator+=(const Vec2f& vec);
+};
 
 class Vec3f {
 public:
+  // x is actual visibility, y is unavg visibility, z is total visibility
+  // x = y / z
   float x,y,z;
   Vec3f() {}
   Vec3f(float val) {
@@ -47,6 +61,8 @@ public:
   }
 
   Vec3f operator+(const Vec3f& vec);
+
+  Vec3f& operator+=(const Vec3f& vec);
 
   Vec3f operator-(const Vec3f& vec);
 
@@ -143,7 +159,7 @@ public:
 
   Vec3f samplePoint();
 
-  Vec3f strength(Vec3f target);
+  float strength(Vec3f target);
 
   void setCenter();
   void setNormal();
@@ -181,6 +197,8 @@ public:
 };
 
 Material findMaterialByName(vector<Material> materials, string name);
+
+Vec3f makeColor(Vec3f color);
 
 
 #endif //EMBREE3_LIGHT_H

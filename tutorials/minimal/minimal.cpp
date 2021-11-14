@@ -115,52 +115,6 @@ RTCScene initializeScene(RTCDevice device, vector<ObjMesh> objects)
   return scene;
 }
 
-Vec3f computeBrdf(RTCRayHit rayHit, Light light, ObjMesh& objMesh, Vec3f lightLoc, Vec3f srayDir) {
-  Vec3f color;
-  Vec3f surfNormal = getSurfNormal(rayHit.hit);
-  Vec3f material = objMesh.material.diffuse / M_PI;
-  Vec3f lightI = light.strength(lightLoc);
-  Vec3f lightNormal = normalize(light.normal);
-  Vec3f hitPoint = getOrigin(rayHit.ray) + rayHit.ray.tfar * getDir(rayHit.ray);
-  float dist = norm(hitPoint - lightLoc);
-
-  // TODO : compute Phong term along with diffuse term
-
-  color = (lightI * material * surfNormal.dotClamp(srayDir) * lightNormal.dotClamp(srayDir)) / (dist * dist);
-  return objMesh.material.ambient + color;
-}
-
-
-Vec3f castRay(RTCScene scene, vector<ObjMesh> objects, Light light, RTCRay rtcRay, AAFParam &aafParam)
-{
-  struct RTCIntersectContext context;
-  rtcInitIntersectContext(&context);
-
-  RTCRayHit rayhit = createRayHit(getOrigin(rtcRay), getDir(rtcRay));
-  rtcIntersect1(scene, &context, &rayhit);
-
-  Vec3f brdf(0);
-
-  if (rayhit.hit.geomID != RTC_INVALID_GEOMETRY_ID) {
-    Vec3f hitPoint = getOrigin(rayhit.ray) + rayhit.ray.tfar * getDir(rayhit.ray);
-    vector<Vec3f> samplePoints = light.samplePoints(true, 16);
-
-    for (Vec3f lightSample : samplePoints) {
-      RTCRayHit shadowRayHit = createRayHit(hitPoint, lightSample - hitPoint, 0.001);
-      rtcIntersect1(scene, &context, &shadowRayHit);
-      float distToLight = norm(lightSample - hitPoint);
-      // light intensity would be computed for the following scenarios
-      // 1. if no occlusion found
-      // 2. occlusion found but distToOcclusion is greater than distToLight
-      if (shadowRayHit.hit.geomID == RTC_INVALID_GEOMETRY_ID || shadowRayHit.ray.tfar >= distToLight) {
-        brdf = brdf + computeBrdf(rayhit, light, objects[rayhit.hit.geomID], lightSample, getDir(shadowRayHit.ray));
-      }
-    }
-    brdf = brdf * light.area() / (float) samplePoints.size();
-  }
-  return brdf;
-}
-
 RTCRay rayThroughPixel(int i, int j, Camera camera) {
   RTCRay ray;
   setOrigin(ray, camera.eye);
@@ -176,6 +130,130 @@ RTCRay rayThroughPixel(int i, int j, Camera camera) {
   ray.tfar = std::numeric_limits<float>::infinity();
   return ray;
 }
+
+
+
+void computeBrdf(AAFParam &aafParam, ObjMesh& objMesh, Pos pos, RTCRayHit rayHit, Light light, Vec3f hitPoint) {
+  Vec3f toLight = light.center - hitPoint;
+  Vec3f surfNormal = getSurfNormal(rayHit.hit);
+
+  Vec3f color(0);
+  if (aafParam.firstPass) {
+    Vec3f L = normalize(toLight);
+    float nDotL = surfNormal.dotClamp(L);
+    // TODO : compute specular term along with diffuse term
+    color = color + objMesh.material.diffuse * nDotL;
+    aafParam.brdf[pos.x][pos.y] = color;
+  }
+}
+
+void afterIntersection(RTCScene scene, RTCIntersectContext &context, RTCRayHit rayhit, Pos pos,
+                       vector<ObjMesh> &objects, AAFParam &aafParam) {
+
+  Light light = aafParam.light;
+  int x = pos.x, y = pos.y;
+  Vec3f hitPoint = getOrigin(rayhit.ray) + rayhit.ray.tfar * getDir(rayhit.ray);
+
+  ObjMesh obj = objects[rayhit.hit.geomID];
+  float distToLight = norm(light.center - hitPoint);
+  computeBrdf(aafParam, obj, pos, rayhit, light, hitPoint);
+  vector<Vec3f> samplePoints = light.samplePoints(true, aafParam.spp[x][y]);
+
+  float d2min = distToLight, d2max = -1;
+  for (Vec3f sample : samplePoints) {
+    float strength = light.strength(sample);
+    Vec3f sampleDir = normalize(sample - hitPoint);
+    Vec3f surfNormal =  getSurfNormal(rayhit.hit);
+
+    if (surfNormal.dot(sampleDir) > 0) {
+      aafParam.useFilterN[x][y] = true;
+      aafParam.vis[x][y].z += strength;
+
+      RTCRayHit shadowRayHit = createRayHit(hitPoint, sample - hitPoint, 0.001);
+      rtcIntersect1(scene, &context, &shadowRayHit);
+      float d1 = norm(sample - hitPoint);
+      // if the shadow ray is occluded
+      if (shadowRayHit.hit.geomID != RTC_INVALID_GEOMETRY_ID || shadowRayHit.ray.tfar < d1) {
+        aafParam.useFilterOcc[x][y] = true;
+        float dprime = shadowRayHit.ray.tfar;
+        d2min = min(d2min, d1 - dprime);
+        d2max = max(d2max, d1 - dprime);
+        if (dprime < 0.000000001) {
+          d2min = d1;
+        }
+      } else {
+        aafParam.vis[x][y].y += strength;
+      }
+    }
+  }
+  float s1 = distToLight/d2min - 1, s2 = distToLight/d2max - 1;
+  aafParam.slope[x][y].x = s1;
+  aafParam.slope[x][y].y = s2;
+}
+
+
+void initialSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
+  vector<ObjMesh> objects = aafParam.objects;
+  int x = pos.x, y = pos.y;
+  struct RTCIntersectContext context;
+  rtcInitIntersectContext(&context);
+
+  RTCRay rtcRay = rayThroughPixel(x, y, aafParam.camera);
+  RTCRayHit rayhit = createRayHit(getOrigin(rtcRay), getDir(rtcRay));
+  rtcIntersect1(scene, &context, &rayhit);
+
+  if (rayhit.hit.geomID == RTC_INVALID_GEOMETRY_ID) {
+    // if no surface was hit
+    aafParam.vis[x][y] = Vec3f(1, 1, 0);
+    aafParam.spp[x][y] = 0;
+    aafParam.brdf[x][y].x = -2;
+    return;
+  }
+
+  afterIntersection(scene, context, rayhit, pos, objects, aafParam);
+  float s1 = aafParam.slope[x][y].x, s2 = aafParam.slope[x][y].y;
+
+  float projDist = 2.f / aafParam.height * (rayhit.ray.tfar * tan(M_PI/12.f));
+  aafParam.projDist[x][y] = projDist;
+  float wxf = aafParam.computeWxf(s2, pos);
+  int spp = (int)(aafParam.bruteRpp * aafParam.bruteRpp);
+  aafParam.vis[x][y].x = 1;
+  // if we have shadow rays were occluded
+  if (aafParam.useFilterOcc[x][y]) {
+    aafParam.spp[x][y] = min(spp, aafParam.computeSpp(s1, s2, wxf, pos));
+    if (aafParam.vis[x][y].z > 0.01) {
+      aafParam.vis[x][y].x = aafParam.vis[x][y].y / aafParam.vis[x][y].z;
+    }
+  }
+}
+
+
+void adaptiveSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
+  int x = pos.x, y = pos.y;
+  if (aafParam.brdf[x][y].x < -1) {
+    return;
+  }
+  // TODO: recompute the targetSpp if the s1s2 filtering step is added
+  int targetSpp = aafParam.spp[x][y];
+  int curSpp = (int) (aafParam.normalRpp * aafParam.normalRpp);
+  if (curSpp < targetSpp) {
+    int diffSpp = (targetSpp - curSpp);
+    aafParam.spp[x][y] = diffSpp;
+
+    struct RTCIntersectContext context;
+    rtcInitIntersectContext(&context);
+
+    RTCRay rtcRay = rayThroughPixel(x, y, aafParam.camera);
+    RTCRayHit rayhit = createRayHit(getOrigin(rtcRay), getDir(rtcRay));
+    rtcIntersect1(scene, &context, &rayhit);
+
+    if (rayhit.hit.geomID == RTC_INVALID_GEOMETRY_ID) {
+      return;
+    }
+    afterIntersection(scene, context, rayhit, pos, aafParam.objects, aafParam);
+  }
+}
+
 
 /* -------------------------------------------------------------------------- */
 /*
@@ -226,6 +304,7 @@ int main()
    * our errorFunction. */
   RTCDevice device = initializeDevice();
 
+  bool disableAdaptiveSamp = false;
   bool enableBasic = false;
   string basicPath = enableBasic ? "/basic" : "";
 
@@ -249,26 +328,50 @@ int main()
   Light light = readLightFile((BASE_PATH + "data" + basicPath +"/light.txt").c_str());
 
   int h = camera.height, w = camera.width;
-  unsigned char image[h][w*3];
 
-  AAFParam aafParam(h, w);
+
+  AAFParam aafParam(h, w, light, camera, objects, 3, 20);
 
   for (int i = 0; i < h; ++i) {
     for (int j = 0; j < w; ++j) {
-      RTCRay incray = rayThroughPixel(i, j, camera);
-
-      Vec3f color = castRay(scene, objects, light, incray, aafParam);
-//      Vec3f color = castRay(scene, objects, light, incray);
-
-      color = Vec3f(pow(color.x, 1/2.2f),  pow(color.y, 1/2.2f), pow(color.z, 1/2.2f));
-      color = scaleColor(reverse(color));
-      // set color in BGR format
-      image[i][j*3+0] = min( color.x, 255.f);
-      image[i][j*3+1] = min( color.y, 255.f);
-      image[i][j*3+2] = min( color.z, 255.f);
-
+      initialSampling(scene, Pos(i, j), aafParam);
     }
   }
+
+  aafParam.firstPass = false;
+
+  float minSpp = numeric_limits<float>::infinity(), maxSpp = -1;
+  if (!disableAdaptiveSamp) {
+    for (int i = 0; i < h; ++i) {
+      for (int j = 0; j < w; ++j) {
+        adaptiveSampling(scene, Pos(i, j), aafParam);
+        minSpp = min(minSpp, (float)aafParam.spp[i][j]);
+        maxSpp = max(maxSpp, (float)aafParam.spp[i][j]);
+      }
+    }
+  }
+
+  bool adapSampleHeatMap = true;
+  unsigned char image[h][w*3];
+
+
+
+  for (int i = 0; i < h; ++i) {
+    for (int j = 0; j < w; ++j) {
+      Vec3f color;
+      if (adapSampleHeatMap) {
+        color = heatMap(aafParam.spp[i][j], minSpp, maxSpp);
+        color = makeColor(color);
+      } else {
+        color = makeColor(aafParam.brdf[i][j] * aafParam.vis[i][j].x);
+      }
+      // set color in BGR format
+      image[i][j*3+0] = color.x;
+      image[i][j*3+1] = color.y;
+      image[i][j*3+2] = color.z;
+    }
+  }
+
   FreeImage_Initialise();
   FIBITMAP *img = FreeImage_ConvertFromRawBits(&(image[0][0]), w, h, w * 3, 24, 0xFF0000, 0x00FF00, 0x0000FF, false);
 

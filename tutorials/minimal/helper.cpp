@@ -18,12 +18,32 @@ float getMinVal(Vec3f vec) {
   return std::min(vec.x, std::min(vec.y, vec.z));
 }
 
+Vec2f Vec2f::operator+(const Vec2f &vec) {
+  Vec2f ans;
+  ans.x = this->x + vec.x;
+  ans.y = this->y + vec.y;
+  return ans;
+}
+
+Vec2f& Vec2f::operator+=(const Vec2f &vec) {
+  this->x += vec.x;
+  this->y += vec.y;
+  return *this;
+}
+
 Vec3f Vec3f::operator+(const Vec3f& vec) {
   Vec3f ans;
   ans.x = this->x + vec.x;
   ans.y = this->y + vec.y;
   ans.z = this->z + vec.z;
   return ans;
+}
+
+Vec3f& Vec3f::operator+=(const Vec3f& vec) {
+  this->x += vec.x;
+  this->y += vec.y;
+  this->z += vec.z;
+  return *this;
 }
 
 Vec3f Vec3f::operator-(const Vec3f& vec) {
@@ -149,10 +169,10 @@ Vec3f Light::samplePoint() {
   return samplePoint;
 }
 
-Vec3f Light::strength(Vec3f target) {
+float Light::strength(Vec3f target) {
   float dist = norm(this->center - target);
   float strength = exp( -0.5 * (dist * dist)/ ( this->sigma *  this->sigma));
-  return this->I * strength;
+  return strength;
 }
 
 void Light::init() {
@@ -243,5 +263,12 @@ Material findMaterialByName(vector<Material> materials, string name) {
     }
   }
   return material;
+}
+
+Vec3f makeColor(Vec3f color) {
+  color = Vec3f(pow(color.x, 1/2.2f),  pow(color.y, 1/2.2f), pow(color.z, 1/2.2f));
+  color = scaleColor(reverse(color));
+  color = Vec3f(std::min(color.x, 255.f), std::min(color.y, 255.f), std::min(color.z, 255.f));
+  return color;
 }
 

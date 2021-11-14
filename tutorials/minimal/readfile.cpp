@@ -176,6 +176,7 @@ Light readLightFile (const char * filename) {
         light.setEdge2(light.origin, vectToVec3f(readValues(s)));
       } else if (cmd == "i" )  {
         light.I = vectToVec3f(readValues(s));
+        // TODO: add ambient light color for the scene
       } else if (cmd == "sigma") {
         light.sigma = readValues(s)[0];
       }
