@@ -30,6 +30,10 @@ public:
   Vec2f operator+(const Vec2f& vec);
 
   Vec2f& operator+=(const Vec2f& vec);
+
+  std::string to_string() {
+    return std::to_string(this->x) + ", " + std::to_string(this->y);
+  }
 };
 
 class Vec3f {

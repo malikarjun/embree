@@ -191,6 +191,10 @@ void afterIntersection(RTCScene scene, RTCIntersectContext &context, RTCRayHit r
   aafParam.slope[x][y].y = s2;
 }
 
+bool debug(int i, int j) {
+  return i == 0 && j == 0;
+}
+
 
 void initialSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
   vector<ObjMesh> objects = aafParam.objects;
@@ -209,6 +213,7 @@ void initialSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
     aafParam.brdf[x][y].x = -2;
     return;
   }
+  aafParam.objId[x][y] = (int) rayhit.hit.geomID;
 
   afterIntersection(scene, context, rayhit, pos, objects, aafParam);
   float s1 = aafParam.slope[x][y].x, s2 = aafParam.slope[x][y].y;
@@ -216,14 +221,72 @@ void initialSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
   float projDist = 2.f / aafParam.height * (rayhit.ray.tfar * tan(M_PI/12.f));
   aafParam.projDist[x][y] = projDist;
   float wxf = aafParam.computeWxf(s2, pos);
-  int spp = (int)(aafParam.bruteRpp * aafParam.bruteRpp);
+
   aafParam.vis[x][y].x = 1;
-  // if we have shadow rays were occluded
+  int theoreticalSpp = 0;
+  // if we have shadow rays that were occluded
   if (aafParam.useFilterOcc[x][y]) {
-    aafParam.spp[x][y] = min(spp, aafParam.computeSpp(s1, s2, wxf, pos));
-    if (aafParam.vis[x][y].z > 0.01) {
-      aafParam.vis[x][y].x = aafParam.vis[x][y].y / aafParam.vis[x][y].z;
+    theoreticalSpp = aafParam.computeSpp(s1, s2, wxf, pos);
+  }
+  aafParam.spp[x][y] = min(theoreticalSpp, aafParam.bruteRpp * aafParam.bruteRpp);
+
+  if (aafParam.useFilterOcc[x][y] && aafParam.vis[x][y].z > 0.01) {
+    // y and z are updated in the afterIntersection fn
+    aafParam.vis[x][y].x = aafParam.vis[x][y].y / aafParam.vis[x][y].z;
+  }
+}
+
+Vec2f slopeMinMax(Vec2f& curSlope, bool& useFilt, int objId, int i, int j, bool firstPass, AAFParam &aafParam) {
+  Vec2f output_slope = curSlope;
+  bool useFilter = false;
+  if (i >= 0 && i < aafParam.height && j >= 0 && j < aafParam.width) {
+    Vec2f target_slope;
+    int targetId = aafParam.objId[i][j];
+    // the following line just ensures that pixels corresponding to diff objects are not considered
+    if (targetId != objId)
+      return output_slope;
+    if (firstPass) {
+      target_slope = aafParam.slope[i][j];
+      useFilter = aafParam.useFilterOcc[i][j];
     }
+    else {
+      target_slope = aafParam.slopeFilter1d[i][j];
+      useFilter = aafParam.useFilterOcc1d[i][j];
+    }
+    if (useFilter) {
+      output_slope.x = max(curSlope.x, target_slope.x);
+      output_slope.y = min(curSlope.y, target_slope.y);
+    }
+  }
+  useFilt = useFilt || useFilter;
+  return output_slope;
+}
+
+void slopeFilterX(Pos pos, AAFParam &aafParam) {
+  int x = pos.x, y = pos.y;
+  Vec2f curSlope = aafParam.slope[x][y];
+  // if there is a shadow at this pixel location, then set this bool to true
+  bool useFilter = aafParam.useFilterOcc[x][y];
+  int objId = aafParam.objId[x][y];
+  for (int i = -aafParam.pixelRadx; i < aafParam.pixelRadx; i++) {
+    curSlope = slopeMinMax(curSlope, useFilter, objId, x + i, y, true, aafParam);
+  }
+  aafParam.useFilterOcc1d[x][y] = aafParam.useFilterOcc1d[x][y] || useFilter;
+  aafParam.slopeFilter1d[x][y] = curSlope;
+}
+
+void slopeFilterY(Pos pos, AAFParam &aafParam) {
+  int x = pos.x, y = pos.y;
+  Vec2f curSlope = aafParam.slopeFilter1d[x][y];
+
+  bool useFilter = aafParam.useFilterOcc1d[x][y];
+  int objId = aafParam.objId[x][y];
+  for (int i = -aafParam.pixelRady; i < aafParam.pixelRady; i++) {
+    curSlope = slopeMinMax(curSlope, useFilter, objId, x, y + i, false, aafParam);
+  }
+  if (!aafParam.useFilterOcc[x][y]) {
+    aafParam.useFilterOcc[x][y] = aafParam.useFilterOcc[x][y] | useFilter;
+    aafParam.slope[x][y] = curSlope;
   }
 }
 
@@ -233,12 +296,16 @@ void adaptiveSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
   if (aafParam.brdf[x][y].x < -1) {
     return;
   }
-  // TODO: recompute the targetSpp if the s1s2 filtering step is added
-  int targetSpp = aafParam.spp[x][y];
+
+  Vec2f curSlope = aafParam.slope[x][y];
+  float wxf = aafParam.computeWxf(curSlope.y, pos);
+  int targetSpp = aafParam.computeSpp(curSlope.x, curSlope.y, wxf, pos);
+  aafParam.spp[x][y] = targetSpp;
+
   int curSpp = (int) (aafParam.normalRpp * aafParam.normalRpp);
   if (curSpp < targetSpp) {
-    int diffSpp = (targetSpp - curSpp);
-    aafParam.spp[x][y] = diffSpp;
+    targetSpp = min(targetSpp, aafParam.maxRppPass * aafParam.maxRppPass);
+    aafParam.spp[x][y] = targetSpp - curSpp;
 
     struct RTCIntersectContext context;
     rtcInitIntersectContext(&context);
@@ -251,6 +318,7 @@ void adaptiveSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
       return;
     }
     afterIntersection(scene, context, rayhit, pos, aafParam.objects, aafParam);
+    aafParam.spp[x][y] = targetSpp;
   }
 }
 
@@ -304,7 +372,6 @@ int main()
    * our errorFunction. */
   RTCDevice device = initializeDevice();
 
-  bool disableAdaptiveSamp = false;
   bool enableBasic = false;
   string basicPath = enableBasic ? "/basic" : "";
 
@@ -340,6 +407,19 @@ int main()
 
   aafParam.firstPass = false;
 
+  for (int i = 0; i < h; ++i) {
+    for (int j = 0; j < w; ++j) {
+      slopeFilterX( Pos(i, j), aafParam);
+    }
+  }
+
+  for (int i = 0; i < h; ++i) {
+    for (int j = 0; j < w; ++j) {
+      slopeFilterY( Pos(i, j), aafParam);
+    }
+  }
+
+  bool disableAdaptiveSamp = false;
   float minSpp = numeric_limits<float>::infinity(), maxSpp = -1;
   if (!disableAdaptiveSamp) {
     for (int i = 0; i < h; ++i) {
@@ -351,11 +431,10 @@ int main()
     }
   }
 
-  bool adapSampleHeatMap = true;
+  bool adapSampleHeatMap = false;
   unsigned char image[h][w*3];
-
-
-
+  cout << "Min spp " << minSpp << endl;
+  cout << "Max spp " << maxSpp << endl;
   for (int i = 0; i < h; ++i) {
     for (int j = 0; j < w; ++j) {
       Vec3f color;
