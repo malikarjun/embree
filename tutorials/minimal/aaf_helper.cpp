@@ -17,31 +17,13 @@ int AAFParam::computeSpp( float s1, float s2, float wxf, Pos pos ) {
   return spp;
 }
 
-//vector<vector<Vec3f>>& heatMap(vector<vector<float> > &img) {
-//  int h = img.size(), w = img[0].size();
-//  vector<vector<Vec3f>> hmap(h, vector<Vec3f>(w));
-//  for (int i = 0; i < h; ++i) {
-//    for (int j = 0; j < w; ++j) {
-//      float fraction, val = img[i][j];
-//      if (val < 0.0f)
-//        fraction = -1.0f;
-//      else if (val > 1.0f)
-//        fraction = 1.0f;
-//      else
-//        fraction = 2.0f * val - 1.0f;
-//
-//      if (fraction < -0.5f)
-//        hmap[i][j] = Vec3f(0.0f, 2*(fraction+1.0f), 1.0f);
-//      else if (fraction < 0.0f)
-//        hmap[i][j] =  Vec3f(0.0f, 1.0f, 1.0f - 2.0f * (fraction + 0.5f));
-//      else if (fraction < 0.5f)
-//        hmap[i][j] = Vec3f(2.0f * fraction, 1.0f, 0.0f);
-//      else
-//        hmap[i][j] = Vec3f(1.0f, 1.0f - 2.0f*(fraction - 0.5f), 0.0f);
-//    }
+float gaussFilter(float distsq, float wxf) {
+  float sample = distsq*wxf*wxf;
+//  if (sample > 0.9999) {
+//    return 0.0;
 //  }
-//  return hmap;
-//}
+  return exp(-3*sample);
+}
 
 
 Vec3f heatMap(float val, float minVal, float maxVal) {

@@ -159,11 +159,11 @@ void afterIntersection(RTCScene scene, RTCIntersectContext &context, RTCRayHit r
   computeBrdf(aafParam, obj, pos, rayhit, light, hitPoint);
   vector<Vec3f> samplePoints = light.samplePoints(true, aafParam.spp[x][y]);
 
+  Vec3f surfNormal =  getSurfNormal(rayhit.hit);
   float d2min = distToLight, d2max = -1;
   for (Vec3f sample : samplePoints) {
     float strength = light.strength(sample);
     Vec3f sampleDir = normalize(sample - hitPoint);
-    Vec3f surfNormal =  getSurfNormal(rayhit.hit);
 
     if (surfNormal.dot(sampleDir) > 0) {
       aafParam.useFilterN[x][y] = true;
@@ -189,6 +189,12 @@ void afterIntersection(RTCScene scene, RTCIntersectContext &context, RTCRayHit r
   float s1 = distToLight/d2min - 1, s2 = distToLight/d2max - 1;
   aafParam.slope[x][y].x = s1;
   aafParam.slope[x][y].y = s2;
+
+  if (aafParam.firstPass) {
+    aafParam.objId[x][y] = (int) rayhit.hit.geomID;
+    aafParam.normal[x][y] = surfNormal;
+    aafParam.worldLoc[x][y] = hitPoint;
+  }
 }
 
 bool debug(int i, int j) {
@@ -213,7 +219,6 @@ void initialSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
     aafParam.brdf[x][y].x = -2;
     return;
   }
-  aafParam.objId[x][y] = (int) rayhit.hit.geomID;
 
   afterIntersection(scene, context, rayhit, pos, objects, aafParam);
   float s1 = aafParam.slope[x][y].x, s2 = aafParam.slope[x][y].y;
@@ -322,6 +327,100 @@ void adaptiveSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
   }
 }
 
+void occlFilter(float& blurredVisSum, float& sumWeight, Vec3f& curWorldLoc, Vec3f curN,
+                float wxf, int i, int j, bool firstPass, AAFParam &aafParam ) {
+  const float distScaleThreshold = 10.0f;
+  const float distThreshold = 10.0f;
+  const float angleThreshold = 20.0f * M_PI / 180.0f;
+
+  if (i >= 0 && i < aafParam.height && j >= 0 && j < aafParam.width ) {
+    Vec3f targetVis = aafParam.vis[i][j];
+    float targetWxf = aafParam.computeWxf(aafParam.slope[i][j].y, Pos(i, j));
+    // TODO: Ask Alex, about how we can visualize wxf in image space?
+    if (targetWxf > 0 && abs(wxf - targetWxf) < distScaleThreshold &&
+        aafParam.useFilterN[i][j]) {
+      Vec3f targetLoc = aafParam.worldLoc[i][j];
+      Vec3f diff = curWorldLoc - targetLoc;
+      float euclideanDistancesq = diff.x * diff.x + diff.y * diff.y
+                                  + diff.z*diff.z;
+      float normcomp = diff.dot(aafParam.light.normal);
+      float distancesq = euclideanDistancesq - normcomp * normcomp;
+      if (distancesq < distThreshold) {
+        Vec3f targetN = aafParam.normal[i][j];
+        if (acos(targetN.dot(curN)) < angleThreshold) {
+          float weight = gaussFilter(distancesq, wxf);
+          float targetVisVal = targetVis.x;
+          if (!firstPass) {
+            targetVisVal = aafParam.visBlur1d[i][j];
+          }
+          blurredVisSum += weight * targetVisVal;
+          sumWeight += weight;
+        }
+      }
+    }
+  }
+}
+
+void occlFilterX(Pos pos, AAFParam &aafParam) {
+  int x = pos.x, y = pos.y;
+  Vec3f curVis = aafParam.vis[x][y];
+  float wxf = aafParam.computeWxf(aafParam.slope[x][y].y, pos);
+  float blurredVis = curVis.x;
+
+  if (!aafParam.useFilterN[x][y] || !aafParam.useFilterOcc[x][y]) {
+    aafParam.visBlur1d[x][y] = blurredVis;
+    return;
+  }
+
+  if (aafParam.blurOcc) {
+
+    float blurredVisSum = 0.0f;
+    float sumWeight = 0.0f;
+
+    Vec3f curWorldLoc = aafParam.worldLoc[x][y];
+    Vec3f curN = aafParam.normal[x][y];
+
+    for (int i = -aafParam.pixelRadx; i < aafParam.pixelRadx; i++) {
+      occlFilter(blurredVisSum, sumWeight, curWorldLoc, curN, wxf, x + i, y, true, aafParam);
+    }
+
+    if (sumWeight > 0.0001f)
+      blurredVis = blurredVisSum / sumWeight;
+  }
+  aafParam.visBlur1d[x][y] = blurredVis;
+}
+
+
+void occlFilterY(Pos pos, AAFParam &aafParam) {
+  int x = pos.x, y = pos.y;
+  Vec3f curVis = aafParam.vis[x][y];
+  float wxf = aafParam.computeWxf(aafParam.slope[x][y].y, pos);
+  float blurredVis = aafParam.visBlur1d[x][y];
+
+  if (aafParam.blurOcc) {
+    if (!aafParam.useFilterOcc[x][y] || !aafParam.useFilterN[x][y]) {
+      aafParam.vis[x][y].x = blurredVis;
+      return;
+    }
+
+    float blurredVisSum = 0.0f;
+    float sumWeight = 0.0f;
+
+    Vec3f curWorldLoc = aafParam.worldLoc[x][y];
+    Vec3f curN = aafParam.normal[x][y];
+
+    for (int j = -aafParam.pixelRady; j < aafParam.pixelRady; j++) {
+      occlFilter(blurredVisSum, sumWeight, curWorldLoc, curN, wxf, x, y + j, false, aafParam);
+    }
+
+    if (sumWeight > 0.00001f)
+      blurredVis = blurredVisSum / sumWeight;
+    else
+      blurredVis = curVis.x;
+  }
+  aafParam.vis[x][y].x = blurredVis;
+}
+
 
 /* -------------------------------------------------------------------------- */
 /*
@@ -397,7 +496,7 @@ int main()
   int h = camera.height, w = camera.width;
 
 
-  AAFParam aafParam(h, w, light, camera, objects, 3, 20);
+  AAFParam aafParam(h, w, light, camera, objects, 7, 20);
 
   for (int i = 0; i < h; ++i) {
     for (int j = 0; j < w; ++j) {
@@ -428,6 +527,18 @@ int main()
         minSpp = min(minSpp, (float)aafParam.spp[i][j]);
         maxSpp = max(maxSpp, (float)aafParam.spp[i][j]);
       }
+    }
+  }
+
+  for (int i = 0; i < h; ++i) {
+    for (int j = 0; j < w; ++j) {
+      occlFilterX( Pos(i, j), aafParam);
+    }
+  }
+
+  for (int i = 0; i < h; ++i) {
+    for (int j = 0; j < w; ++j) {
+      occlFilterY( Pos(i, j), aafParam);
     }
   }
 
