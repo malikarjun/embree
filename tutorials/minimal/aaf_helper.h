@@ -28,7 +28,7 @@ public:
   vector<vector<Vec3f>> vis, brdf, worldLoc, normal;
   vector<vector<Vec2f>> slope, slopeFilter1d;
   vector<vector<int>> spp, objId;
-  vector<vector<float>> projDist, visBlur1d;
+  vector<vector<float>> projDist, visBlur1d, beta;
   vector<vector<bool>> useFilterN, useFilterOcc, useFilterOcc1d;
   bool firstPass, blurOcc;
   Light light;
@@ -38,19 +38,20 @@ public:
 
 
 
-  AAFParam(int h, int w, Light light, Camera camera, vector<ObjMesh> &objects,  int normalRpp, int bruteRpp) :
+  AAFParam(int h, int w, Light light, Camera camera, vector<ObjMesh> &objects,  int normalRpp, int bruteRpp,
+           int maxRppPass) :
       height(h), width(w), pixelRadx(10), pixelRady(10),
-      vis(h, vector<Vec3f>(w, Vec3f(0.f))),brdf(h, vector<Vec3f>(w, Vec3f(0.f))),
+      vis(h, vector<Vec3f>(w, Vec3f(0.f))), brdf(h, vector<Vec3f>(w, Vec3f(0.f))),
       worldLoc(h, vector<Vec3f>(w)), normal(h, vector<Vec3f>(w)),
       slope(h, vector<Vec2f>(w)), slopeFilter1d(h, vector<Vec2f>(w)),
       spp(h, vector<int>(w, (int)(normalRpp*normalRpp))), objId(h, vector<int>(w)),
-      projDist(h, vector<float>(w)), visBlur1d(h, vector<float>(w)),
+      projDist(h, vector<float>(w)), visBlur1d(h, vector<float>(w)), beta(h, vector<float>(w)),
       useFilterN(h, vector<bool>(w, false)), useFilterOcc(h, vector<bool>(w, false)), useFilterOcc1d(h, vector<bool>(w, false)),
       firstPass(true), blurOcc(true),
       light(light),
       camera(camera),
       objects(objects),
-      normalRpp(normalRpp), bruteRpp(bruteRpp), maxRppPass(15) {
+      normalRpp(normalRpp), bruteRpp(bruteRpp), maxRppPass(maxRppPass) {
   }
 
   float computeWxf( float s2, Pos pos);

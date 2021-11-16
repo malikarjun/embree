@@ -4,17 +4,17 @@
 
 #include "aaf_helper.h"
 
-const float spp_mu = 2;
+const float sppMu = 2;
 
 float AAFParam::computeWxf( float s2, Pos pos ) {
-  return min(spp_mu/(this->light.sigma * s2), 1/(this->projDist[pos.x][pos.y]*(1+s2)));
+  return min(sppMu / (this->light.sigma * s2), 1 / (this->projDist[pos.x][pos.y] * (1 + s2)));
 }
 
 int AAFParam::computeSpp( float s1, float s2, float wxf, Pos pos ) {
-  float spp_t_1 = (1/(1+s2)+this->projDist[pos.x][pos.y]*wxf);
-  float spp_t_2 = (1+this->light.sigma * min(s1*wxf, 1/this->projDist[pos.x][pos.y] * s1/(1+s1) )  );
-  float spp = 4*spp_t_1*spp_t_1*spp_t_2*spp_t_2;
-  return spp;
+  float sppT1 = (1 / (1 + s2) + this->projDist[pos.x][pos.y] * wxf);
+  float sppT2 = (1 + this->light.sigma * min(s1 * wxf, 1 / this->projDist[pos.x][pos.y] * s1 / (1 + s1) )  );
+  float spp = 4 * sppT1 * sppT1 * sppT2 * sppT2;
+  return ceil(spp);
 }
 
 float gaussFilter(float distsq, float wxf) {

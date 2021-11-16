@@ -138,13 +138,12 @@ void computeBrdf(AAFParam &aafParam, ObjMesh& objMesh, Pos pos, RTCRayHit rayHit
   Vec3f surfNormal = getSurfNormal(rayHit.hit);
 
   Vec3f color(0);
-  if (aafParam.firstPass) {
-    Vec3f L = normalize(toLight);
-    float nDotL = surfNormal.dotClamp(L);
-    // TODO : compute specular term along with diffuse term
-    color = color + objMesh.material.diffuse * nDotL;
-    aafParam.brdf[pos.x][pos.y] = color;
-  }
+  Vec3f L = normalize(toLight);
+  float nDotL = surfNormal.dotClamp(L);
+  // TODO : compute specular term along with diffuse term
+  color = color + objMesh.material.diffuse * nDotL;
+  aafParam.brdf[pos.x][pos.y] = color;
+
 }
 
 void afterIntersection(RTCScene scene, RTCIntersectContext &context, RTCRayHit rayhit, Pos pos,
@@ -156,7 +155,9 @@ void afterIntersection(RTCScene scene, RTCIntersectContext &context, RTCRayHit r
 
   ObjMesh obj = objects[rayhit.hit.geomID];
   float distToLight = norm(light.center - hitPoint);
-  computeBrdf(aafParam, obj, pos, rayhit, light, hitPoint);
+  if (aafParam.firstPass) {
+    computeBrdf(aafParam, obj, pos, rayhit, light, hitPoint);
+  }
   vector<Vec3f> samplePoints = light.samplePoints(true, aafParam.spp[x][y]);
 
   Vec3f surfNormal =  getSurfNormal(rayhit.hit);
@@ -198,7 +199,8 @@ void afterIntersection(RTCScene scene, RTCIntersectContext &context, RTCRayHit r
 }
 
 bool debug(int i, int j) {
-  return i == 0 && j == 0;
+  // i -> h, j -> w
+  return i == 384 && j == 125;
 }
 
 
@@ -212,20 +214,26 @@ void initialSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
   RTCRayHit rayhit = createRayHit(getOrigin(rtcRay), getDir(rtcRay));
   rtcIntersect1(scene, &context, &rayhit);
 
+  if (debug(x, y)) {
+    float f = aafParam.computeWxf(0, pos);
+  }
+
   if (rayhit.hit.geomID == RTC_INVALID_GEOMETRY_ID) {
     // if no surface was hit
     aafParam.vis[x][y] = Vec3f(1, 1, 0);
     aafParam.spp[x][y] = 0;
     aafParam.brdf[x][y].x = -2;
+    aafParam.beta[x][y] = 0;
     return;
   }
 
   afterIntersection(scene, context, rayhit, pos, objects, aafParam);
   float s1 = aafParam.slope[x][y].x, s2 = aafParam.slope[x][y].y;
 
-  float projDist = 2.f / aafParam.height * (rayhit.ray.tfar * tan(M_PI/12.f));
+  float projDist = 2.f / aafParam.height * (rayhit.ray.tfar * tan(aafParam.camera.fovy/2));
   aafParam.projDist[x][y] = projDist;
   float wxf = aafParam.computeWxf(s2, pos);
+  aafParam.beta[x][y] = 1/wxf;
 
   aafParam.vis[x][y].x = 1;
   int theoreticalSpp = 0;
@@ -298,6 +306,11 @@ void slopeFilterY(Pos pos, AAFParam &aafParam) {
 
 void adaptiveSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
   int x = pos.x, y = pos.y;
+
+  if (debug(x, y)) {
+    float f = aafParam.computeWxf(0, pos);
+  }
+
   if (aafParam.brdf[x][y].x < -1) {
     return;
   }
@@ -306,6 +319,7 @@ void adaptiveSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
   float wxf = aafParam.computeWxf(curSlope.y, pos);
   int targetSpp = aafParam.computeSpp(curSlope.x, curSlope.y, wxf, pos);
   aafParam.spp[x][y] = targetSpp;
+  aafParam.beta[x][y] = 1/wxf;
 
   int curSpp = (int) (aafParam.normalRpp * aafParam.normalRpp);
   if (curSpp < targetSpp) {
@@ -341,8 +355,8 @@ void occlFilter(float& blurredVisSum, float& sumWeight, Vec3f& curWorldLoc, Vec3
         aafParam.useFilterN[i][j]) {
       Vec3f targetLoc = aafParam.worldLoc[i][j];
       Vec3f diff = curWorldLoc - targetLoc;
-      float euclideanDistancesq = diff.x * diff.x + diff.y * diff.y
-                                  + diff.z*diff.z;
+      float diffNorm = norm(diff);
+      float euclideanDistancesq = diffNorm * diffNorm;
       float normcomp = diff.dot(aafParam.light.normal);
       float distancesq = euclideanDistancesq - normcomp * normcomp;
       if (distancesq < distThreshold) {
@@ -496,7 +510,7 @@ int main()
   int h = camera.height, w = camera.width;
 
 
-  AAFParam aafParam(h, w, light, camera, objects, 7, 20);
+  AAFParam aafParam(h, w, light, camera, objects, 7, 20, 10);
 
   for (int i = 0; i < h; ++i) {
     for (int j = 0; j < w; ++j) {
@@ -505,6 +519,9 @@ int main()
   }
 
   aafParam.firstPass = false;
+  int minSpp = numeric_limits<int>::infinity(), maxSpp = -1;
+  float minBeta = numeric_limits<float>::infinity(), maxBeta = -numeric_limits<float>::infinity();
+
 
   for (int i = 0; i < h; ++i) {
     for (int j = 0; j < w; ++j) {
@@ -519,13 +536,16 @@ int main()
   }
 
   bool disableAdaptiveSamp = false;
-  float minSpp = numeric_limits<float>::infinity(), maxSpp = -1;
+
   if (!disableAdaptiveSamp) {
     for (int i = 0; i < h; ++i) {
       for (int j = 0; j < w; ++j) {
         adaptiveSampling(scene, Pos(i, j), aafParam);
-        minSpp = min(minSpp, (float)aafParam.spp[i][j]);
-        maxSpp = max(maxSpp, (float)aafParam.spp[i][j]);
+        minSpp = min(minSpp, aafParam.spp[i][j]);
+        maxSpp = max(maxSpp, aafParam.spp[i][j]);
+
+        minBeta = min(minBeta, aafParam.beta[i][j]);
+        maxBeta = max(maxBeta, aafParam.beta[i][j]);
       }
     }
   }
@@ -542,15 +562,24 @@ int main()
     }
   }
 
-  bool adapSampleHeatMap = false;
+
+  bool sppHeatMap = false, betaHeatMap = false;
   unsigned char image[h][w*3];
   cout << "Min spp " << minSpp << endl;
   cout << "Max spp " << maxSpp << endl;
+  cout << "Min beta " << minBeta << endl;
+  cout << "Max beta " << maxBeta << endl;
   for (int i = 0; i < h; ++i) {
     for (int j = 0; j < w; ++j) {
       Vec3f color;
-      if (adapSampleHeatMap) {
+      if (sppHeatMap) {
         color = heatMap(aafParam.spp[i][j], minSpp, maxSpp);
+        color = makeColor(color);
+      } else if (betaHeatMap) {
+        if (aafParam.useFilterOcc[i][j])
+          color = heatMap(aafParam.beta[i][j], minBeta, maxBeta);
+        else
+          color = Vec3f(0);
         color = makeColor(color);
       } else {
         color = makeColor(aafParam.brdf[i][j] * aafParam.vis[i][j].x);
