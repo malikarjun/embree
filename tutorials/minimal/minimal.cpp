@@ -1,15 +1,10 @@
 // Copyright 2009-2021 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
-#include <embree3/rtcore.h>
-#include <stdio.h>
-#include <iostream>
-#include <math.h>
-#include <limits>
-#include <stdio.h>
-#include <FreeImage.h>
-#include "readfile.h"
-#include "aaf_helper.h"
+
+
+#include "minimal.h"
+
 
 
 #if defined(_WIN32)
@@ -435,55 +430,20 @@ void occlFilterY(Pos pos, AAFParam &aafParam) {
   aafParam.vis[x][y].x = blurredVis;
 }
 
+void saveImageToFile(unsigned char* image, int w, int h) {
+  FreeImage_Initialise();
+  FIBITMAP *img = FreeImage_ConvertFromRawBits(image, w, h, w * 3, 24, 0xFF0000, 0x00FF00, 0x0000FF, false);
 
-/* -------------------------------------------------------------------------- */
-/*
-
-void print2d(int** img) {
-  for (int i = 0; i < 2; ++i) {
-    for (int j = 0; j < 2; ++j) {
-      cout << img[i][j] << endl;
-    }
+  if (FreeImage_Save(FIF_PNG, img, (BASE_PATH + "image.png").c_str(), 0)) {
+    printf("Image saved successfully!");
   }
+  FreeImage_DeInitialise();
 }
 
-void alloc_mem(int*** img, int h, int w) {
-  *img = new int*[h];
-  for (int i = 0; i < h; ++i) {
-    (*img)[i] = new int [w];
-  }
-}
 
-int main() {
-//  Vec3f pos = Vec3f(-4.5, 16, 8);
-//  Vec3f pos1 = Vec3f(1.5, 16, 8);
-//  Vec3f pos2 = Vec3f(-4.5, 21.8284, 3.8284);
-//  Vec3f axis1 = pos1-pos;
-//  Vec3f axis2 = pos2-pos;
-//
-//  Vec3f cross_prod = cross(axis1,axis2);
-//  float _sigma = sqrt(norm(cross_prod)/4.0f);
-//  cout << "Light sigma is " << _sigma << endl;
-//  return 0;
-  int **img;
+void Minimal::init() {
+  this->device = initializeDevice();
 
-  int h = 640, w = 480;
-  alloc_mem(&img, h, w);
-
-  img[0][0] = 1;
-  img[0][1] = 2;
-  img[1][0] = 3;
-  img[1][1] = 4;
-
-  print2d(img);
-}
-*/
-
-int main()
-{
-  /* Initialization. All of this may fail, but we will be notified by
-   * our errorFunction. */
-  RTCDevice device = initializeDevice();
 
   bool enableBasic = false;
   string basicPath = enableBasic ? "/basic" : "";
@@ -498,23 +458,33 @@ int main()
   }
 
   vector<ObjMesh> objects;
-  for(auto fileName : objFileNames) {
+  for (auto fileName: objFileNames) {
     objects.push_back(readObjFile((BASE_PATH + fileName).c_str(),
-                                  (BASE_PATH + "data" + basicPath +"/material.mtl").c_str()));
+                                  (BASE_PATH + "data" + basicPath + "/material.mtl").c_str()));
   }
 
-  RTCScene scene = initializeScene(device, objects);
-  Camera camera = readCameraFile((BASE_PATH + "data" + basicPath +"/camera.txt").c_str());
-  Light light = readLightFile((BASE_PATH + "data" + basicPath +"/light.txt").c_str());
+  this->scene = initializeScene(this->device, objects);
+  Camera camera = readCameraFile((BASE_PATH + "data" + basicPath + "/camera.txt").c_str());
+  Light light = readLightFile((BASE_PATH + "data" + basicPath + "/light.txt").c_str());
 
-  int h = camera.height, w = camera.width;
+  this->aafParam = AAFParam((int)camera.height, (int)camera.width, light, camera, objects, 7,
+                            20, 10);;
+}
+
+void Minimal::destroy() {
+
+  rtcReleaseScene(this->scene);
+  rtcReleaseDevice(this->device);
+}
 
 
-  AAFParam aafParam(h, w, light, camera, objects, 7, 20, 10);
+
+void Minimal::render(unsigned char* pixel) {
+  int h = aafParam.height, w = aafParam.width;
 
   for (int i = 0; i < h; ++i) {
     for (int j = 0; j < w; ++j) {
-      initialSampling(scene, Pos(i, j), aafParam);
+      initialSampling(this->scene, Pos(i, j), aafParam);
     }
   }
 
@@ -525,13 +495,13 @@ int main()
 
   for (int i = 0; i < h; ++i) {
     for (int j = 0; j < w; ++j) {
-      slopeFilterX( Pos(i, j), aafParam);
+      slopeFilterX(Pos(i, j), aafParam);
     }
   }
 
   for (int i = 0; i < h; ++i) {
     for (int j = 0; j < w; ++j) {
-      slopeFilterY( Pos(i, j), aafParam);
+      slopeFilterY(Pos(i, j), aafParam);
     }
   }
 
@@ -540,7 +510,7 @@ int main()
   if (!disableAdaptiveSamp) {
     for (int i = 0; i < h; ++i) {
       for (int j = 0; j < w; ++j) {
-        adaptiveSampling(scene, Pos(i, j), aafParam);
+        adaptiveSampling(this->scene, Pos(i, j), aafParam);
         minSpp = min(minSpp, aafParam.spp[i][j]);
         maxSpp = max(maxSpp, aafParam.spp[i][j]);
 
@@ -552,23 +522,21 @@ int main()
 
   for (int i = 0; i < h; ++i) {
     for (int j = 0; j < w; ++j) {
-      occlFilterX( Pos(i, j), aafParam);
+      occlFilterX(Pos(i, j), aafParam);
     }
   }
 
   for (int i = 0; i < h; ++i) {
     for (int j = 0; j < w; ++j) {
-      occlFilterY( Pos(i, j), aafParam);
+      occlFilterY(Pos(i, j), aafParam);
     }
   }
 
-
   bool sppHeatMap = false, betaHeatMap = false;
-  unsigned char image[h][w*3];
-  cout << "Min spp " << minSpp << endl;
-  cout << "Max spp " << maxSpp << endl;
-  cout << "Min beta " << minBeta << endl;
-  cout << "Max beta " << maxBeta << endl;
+//  cout << "Min spp " << minSpp << endl;
+//  cout << "Max spp " << maxSpp << endl;
+//  cout << "Min beta " << minBeta << endl;
+//  cout << "Max beta " << maxBeta << endl;
   for (int i = 0; i < h; ++i) {
     for (int j = 0; j < w; ++j) {
       Vec3f color;
@@ -585,28 +553,13 @@ int main()
         color = makeColor(aafParam.brdf[i][j] * aafParam.vis[i][j].x);
       }
       // set color in BGR format
-      image[i][j*3+0] = color.x;
-      image[i][j*3+1] = color.y;
-      image[i][j*3+2] = color.z;
+      pixel[i * (w * 3) + j * 3 + 0] = color.x;
+      pixel[i * (w * 3) + j * 3 + 1] = color.y;
+      pixel[i * (w * 3) + j * 3 + 2] = color.z;
     }
   }
 
-  FreeImage_Initialise();
-  FIBITMAP *img = FreeImage_ConvertFromRawBits(&(image[0][0]), w, h, w * 3, 24, 0xFF0000, 0x00FF00, 0x0000FF, false);
+//  saveImageToFile(&(image[0][0]), w, h);
 
-  if (FreeImage_Save(FIF_PNG, img, (BASE_PATH + "image.png").c_str(), 0)) {
-    printf("Image saved successfully!");
-  }
-
-
-  FreeImage_DeInitialise();
-
-  /* Though not strictly necessary in this example, you should
- * always make sure to release resources allocated through Embree. */
-  rtcReleaseScene(scene);
-  rtcReleaseDevice(device);
-
-
-  return 0;
 }
 

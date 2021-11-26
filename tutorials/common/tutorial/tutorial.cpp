@@ -921,6 +921,18 @@ namespace embree
     }
   }
 
+//#include <FreeImage.h>
+  std::string BASE_PATH = "../tutorials/minimal/";
+//  void saveImageToFile(unsigned char* image, int w, int h) {
+//    FreeImage_Initialise();
+//    FIBITMAP *img = FreeImage_ConvertFromRawBits(image, w, h, w * 3, 24, 0xFF0000, 0x00FF00, 0x0000FF, false);
+//
+//    if (FreeImage_Save(FIF_PNG, img, (BASE_PATH + "image.png").c_str(), 0)) {
+//      printf("Image saved successfully!");
+//    }
+//    FreeImage_DeInitialise();
+//  }
+
   void TutorialApplication::displayFunc()
   {
     /* update camera */
@@ -941,74 +953,86 @@ namespace embree
     /* draw pixels to screen */
     glRasterPos2i(-1,1);
     glPixelZoom(1.0f,-1.0f);
-    glDrawPixels(width,height,GL_RGBA,GL_UNSIGNED_BYTE,pixels);
 
-    ImGui_ImplGlfwGL2_NewFrame();
+    for (int y = 0; y < height; ++y) {
+      for (int x = 0; x < width; ++x) {
+        pixels[y*width*3 + x*3 + 0] = 200;
+        pixels[y*width*3 + x*3 + 1] = 0;
+        pixels[y*width*3 + x*3 + 2] = 0;
+      }
+    }
 
-    ImGuiWindowFlags window_flags = 0;
-    window_flags |= ImGuiWindowFlags_NoTitleBar;
-    //window_flags |= ImGuiWindowFlags_NoScrollbar;
-    //window_flags |= ImGuiWindowFlags_MenuBar;
-    //window_flags |= ImGuiWindowFlags_NoMove;
-    //window_flags |= ImGuiWindowFlags_NoResize;
-    //window_flags |= ImGuiWindowFlags_NoCollapse;
-    //window_flags |= ImGuiWindowFlags_NoNav;
+//    Ref<Image> image = new Image4uc(width, height, (Col4uc*)pixels);
+//    storeImage(image, BASE_PATH + "image_tutorial.ppm");
 
-    //ImGui::GetStyle().WindowBorderSize = 0.0f;
-    //ImGui::SetNextWindowPos(ImVec2(width-200,0));
-    //ImGui::SetNextWindowSize(ImVec2(200,height));
-    ImGui::SetNextWindowBgAlpha(0.3f);
-    ImGui::Begin("Embree", nullptr, window_flags);
-    drawGUI();
+    glDrawPixels(width,height,GL_RGB,GL_UNSIGNED_BYTE,pixels);
 
-    double time = avg_render_time.get();
-    double fps = time != 0.0 ? 1.0f/time : 0.0;
-    ImGui::Text("%3.2f fps",fps);
-#if defined(RAY_STATS)
-    ImGui::Text("%3.2f Mray/s",avg_mrayps.get());
-#endif
-    ImGui::End();
+//    ImGui_ImplGlfwGL2_NewFrame();
 
-    //ImGui::ShowDemoWindow();
-
-    ImGui::Render();
-    ImGui_ImplGlfwGL2_RenderDrawData(ImGui::GetDrawData());
+//    ImGuiWindowFlags window_flags = 0;
+//    window_flags |= ImGuiWindowFlags_NoTitleBar;
+//    //window_flags |= ImGuiWindowFlags_NoScrollbar;
+//    //window_flags |= ImGuiWindowFlags_MenuBar;
+//    //window_flags |= ImGuiWindowFlags_NoMove;
+//    //window_flags |= ImGuiWindowFlags_NoResize;
+//    //window_flags |= ImGuiWindowFlags_NoCollapse;
+//    //window_flags |= ImGuiWindowFlags_NoNav;
+//
+//    //ImGui::GetStyle().WindowBorderSize = 0.0f;
+//    //ImGui::SetNextWindowPos(ImVec2(width-200,0));
+//    //ImGui::SetNextWindowSize(ImVec2(200,height));
+//    ImGui::SetNextWindowBgAlpha(0.3f);
+//    ImGui::Begin("Embree", nullptr, window_flags);
+//    drawGUI();
+//
+//    double time = avg_render_time.get();
+//    double fps = time != 0.0 ? 1.0f/time : 0.0;
+//    ImGui::Text("%3.2f fps",fps);
+//#if defined(RAY_STATS)
+//    ImGui::Text("%3.2f Mray/s",avg_mrayps.get());
+//#endif
+//    ImGui::End();
+//
+//    //ImGui::ShowDemoWindow();
+//
+//    ImGui::Render();
+//    ImGui_ImplGlfwGL2_RenderDrawData(ImGui::GetDrawData());
 
     glfwSwapBuffers(window);
 
-#ifdef __APPLE__
-    // work around glfw issue #1334
-    // https://github.com/glfw/glfw/issues/1334
-    static bool macMoved = false;
-
-    if (!macMoved) {
-      int x, y;
-      glfwGetWindowPos(window, &x, &y);
-      glfwSetWindowPos(window, ++x, y);
-      macMoved = true;
-    }
-#endif
-
-    double dt1 = getSeconds()-t0;
-    avg_frame_time.add(dt1);
-
-    if (print_frame_rate)
-    {
-      std::ostringstream stream;
-      stream.setf(std::ios::fixed, std::ios::floatfield);
-      stream.precision(2);
-      stream << "render: ";
-      stream << 1.0f/dt0 << " fps, ";
-      stream << dt0*1000.0f << " ms, ";
-#if defined(RAY_STATS)
-      stream << mrayps << " Mray/s, ";
-#endif
-      stream << "display: ";
-      stream << 1.0f/dt1 << " fps, ";
-      stream << dt1*1000.0f << " ms, ";
-      stream << width << "x" << height << " pixels";
-      std::cout << stream.str() << std::endl;
-    }
+//#ifdef __APPLE__
+//    // work around glfw issue #1334
+//    // https://github.com/glfw/glfw/issues/1334
+//    static bool macMoved = false;
+//
+//    if (!macMoved) {
+//      int x, y;
+//      glfwGetWindowPos(window, &x, &y);
+//      glfwSetWindowPos(window, ++x, y);
+//      macMoved = true;
+//    }
+//#endif
+//
+//    double dt1 = getSeconds()-t0;
+//    avg_frame_time.add(dt1);
+//
+//    if (print_frame_rate)
+//    {
+//      std::ostringstream stream;
+//      stream.setf(std::ios::fixed, std::ios::floatfield);
+//      stream.precision(2);
+//      stream << "render: ";
+//      stream << 1.0f/dt0 << " fps, ";
+//      stream << dt0*1000.0f << " ms, ";
+//#if defined(RAY_STATS)
+//      stream << mrayps << " Mray/s, ";
+//#endif
+//      stream << "display: ";
+//      stream << 1.0f/dt1 << " fps, ";
+//      stream << dt1*1000.0f << " ms, ";
+//      stream << width << "x" << height << " pixels";
+//      std::cout << stream.str() << std::endl;
+//    }
   }
 
   void TutorialApplication::reshapeFunc(GLFWwindow* window, int, int)

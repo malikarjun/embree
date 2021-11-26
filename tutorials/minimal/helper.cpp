@@ -267,7 +267,8 @@ Material findMaterialByName(vector<Material> materials, string name) {
 
 Vec3f makeColor(Vec3f color) {
   color = Vec3f(pow(color.x, 1/2.2f),  pow(color.y, 1/2.2f), pow(color.z, 1/2.2f));
-  color = scaleColor(reverse(color));
+//  color = scaleColor(reverse(color));
+  color = scaleColor(color);
   color = Vec3f(std::min(color.x, 255.f), std::min(color.y, 255.f), std::min(color.z, 255.f));
   return color;
 }

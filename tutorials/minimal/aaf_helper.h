@@ -23,6 +23,7 @@ public:
 
 
 class AAFParam {
+
 public:
   int height, width, pixelRadx, pixelRady;
   vector<vector<Vec3f>> vis, brdf, worldLoc, normal;
@@ -36,9 +37,9 @@ public:
   vector<ObjMesh> objects;
   int normalRpp, bruteRpp, maxRppPass;
 
+  AAFParam(){}
 
-
-  AAFParam(int h, int w, Light light, Camera camera, vector<ObjMesh> &objects,  int normalRpp, int bruteRpp,
+  AAFParam(int h, int w, Light light, Camera camera, vector<ObjMesh> &objects, int normalRpp, int bruteRpp,
            int maxRppPass) :
       height(h), width(w), pixelRadx(10), pixelRady(10),
       vis(h, vector<Vec3f>(w, Vec3f(0.f))), brdf(h, vector<Vec3f>(w, Vec3f(0.f))),
