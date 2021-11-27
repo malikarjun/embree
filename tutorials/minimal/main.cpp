@@ -4,11 +4,10 @@
 
 #include <OpenGL/gl.h>
 #include <GLFW/glfw3.h>
+#include "parallel_for.h"
+#include <chrono>
 
 #include "minimal.h"
-
-
-
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
@@ -22,12 +21,34 @@ void processInput(GLFWwindow *window, unsigned char* pixels, AAFParam& aafParam)
   }
   if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
     aafParam.camera.eye.x -= 1;
-  }
-  if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+    cout << "pressed left" << endl;
+  } else if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
     aafParam.camera.eye.x += 1;
+    cout << "pressed right" << endl;
   }
   aafParam.camera.setUpCameraCoordFrame();
 }
+
+
+/*int main() {
+  auto values = std::vector<double>(10000);
+  std::mutex m;
+  int width = 640, height = 480;
+
+
+  tbb::parallel_for( tbb::blocked_range2d<int, int>(0,width, 0, height),
+                     [&](tbb::blocked_range2d<int, int> r) {
+    m.lock();
+    for (int i=r.rows().begin(); i<r.rows().end(); ++i) {
+      for (int j = r.cols().begin(); j < r.cols().end(); ++j) {
+        cout << "(" << i << ", " << j << ")" << endl;
+      }
+    }
+    m.unlock();
+  });
+
+  return 0;
+}*/
 
 int main()
 {
@@ -50,21 +71,27 @@ int main()
   minimal.init();
 
   // render loop
-  int fcnt = 0;
   while(!glfwWindowShouldClose(window)) {
-//    cout << "Frame " << fcnt++ << endl;
+
+    auto start_time = std::chrono::high_resolution_clock::now();
     // input
     processInput(window, pixels, minimal.aafParam);
 
     // rendering commands here
     glClear(GL_COLOR_BUFFER_BIT);
-    minimal.aafParam.camera.eye.x -= 0.3;
-    minimal.aafParam.camera.setUpCameraCoordFrame();
+//    minimal.aafParam.camera.eye.x -= 0.3;
+//    minimal.aafParam.camera.setUpCameraCoordFrame();
+
     minimal.render(pixels);
 
     glDrawPixels(w, h, GL_RGB, GL_UNSIGNED_BYTE, pixels);
 
     glfwSwapBuffers(window);
+    auto end_time = chrono::high_resolution_clock::now();
+    auto time = end_time - start_time;
+    float tt = (time / chrono::milliseconds(1))/1000.f;
+//    cout << "time : " << tt  << endl;
+    cout << "fps : " <<  1/tt << endl;
     glfwPollEvents();
   }
 
@@ -73,9 +100,3 @@ int main()
   minimal.destroy();
   return 0;
 }
-
-
-
-
-
-

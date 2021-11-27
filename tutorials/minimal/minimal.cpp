@@ -4,6 +4,7 @@
 
 
 #include "minimal.h"
+#include "parallel_for.h"
 
 
 
@@ -497,55 +498,71 @@ void Minimal::render(unsigned char* pixels) {
 //  cout << "camera v" <<  aafParam.camera.v.to_string() << endl;
 //  cout << "camera w" <<  aafParam.camera.w.to_string() << endl << endl;
 
-  for (int i = 0; i < h; ++i) {
-    for (int j = 0; j < w; ++j) {
-      initialSampling(this->scene, Pos(i, j), aafParam);
+  tbb::parallel_for( tbb::blocked_range2d<int, int>(0, h, 0, w),
+                     [&](tbb::blocked_range2d<int, int> r) {
+    for (int i = r.rows().begin(); i < r.rows().end(); ++i) {
+     for (int j = r.cols().begin(); j < r.cols().end(); ++j) {
+       initialSampling(this->scene, Pos(i, j), aafParam);
+     }
     }
-  }
+  });
 
   aafParam.firstPass = false;
   int minSpp = numeric_limits<int>::infinity(), maxSpp = -1;
   float minBeta = numeric_limits<float>::infinity(), maxBeta = -numeric_limits<float>::infinity();
 
-
-  for (int i = 0; i < h; ++i) {
-    for (int j = 0; j < w; ++j) {
-      slopeFilterX(Pos(i, j), aafParam);
+  tbb::parallel_for( tbb::blocked_range2d<int, int>(0, h, 0, w),
+                     [&](tbb::blocked_range2d<int, int> r) {
+    for (int i = r.rows().begin(); i < r.rows().end(); ++i) {
+      for (int j = r.cols().begin(); j < r.cols().end(); ++j) {
+        slopeFilterX(Pos(i, j), aafParam);
+      }
     }
-  }
+  });
 
-  for (int i = 0; i < h; ++i) {
-    for (int j = 0; j < w; ++j) {
-      slopeFilterY(Pos(i, j), aafParam);
+  tbb::parallel_for( tbb::blocked_range2d<int, int>(0, h, 0, w),[&](tbb::blocked_range2d<int, int> r) {
+    for (int i = r.rows().begin(); i < r.rows().end(); ++i) {
+      for (int j = r.cols().begin(); j < r.cols().end(); ++j) {
+        slopeFilterY(Pos(i, j), aafParam);
+      }
     }
-  }
+  });
 
   bool disableAdaptiveSamp = false;
 
   if (!disableAdaptiveSamp) {
-    for (int i = 0; i < h; ++i) {
-      for (int j = 0; j < w; ++j) {
-        adaptiveSampling(this->scene, Pos(i, j), aafParam);
-        minSpp = min(minSpp, aafParam.spp[i][j]);
-        maxSpp = max(maxSpp, aafParam.spp[i][j]);
 
-        minBeta = min(minBeta, aafParam.beta[i][j]);
-        maxBeta = max(maxBeta, aafParam.beta[i][j]);
+    tbb::parallel_for( tbb::blocked_range2d<int, int>(0, h, 0, w),[&](tbb::blocked_range2d<int, int> r) {
+      for (int i = r.rows().begin(); i < r.rows().end(); ++i) {
+        for (int j = r.cols().begin(); j < r.cols().end(); ++j) {
+          adaptiveSampling(this->scene, Pos(i, j), aafParam);
+          minSpp = min(minSpp, aafParam.spp[i][j]);
+          maxSpp = max(maxSpp, aafParam.spp[i][j]);
+
+          minBeta = min(minBeta, aafParam.beta[i][j]);
+          maxBeta = max(maxBeta, aafParam.beta[i][j]);
+        }
+      }
+    });
+
+  }
+
+  tbb::parallel_for( tbb::blocked_range2d<int, int>(0, h, 0, w),[&](tbb::blocked_range2d<int, int> r) {
+    for (int i = r.rows().begin(); i < r.rows().end(); ++i) {
+      for (int j = r.cols().begin(); j < r.cols().end(); ++j) {
+        occlFilterX(Pos(i, j), aafParam);
       }
     }
-  }
+  });
 
-  for (int i = 0; i < h; ++i) {
-    for (int j = 0; j < w; ++j) {
-      occlFilterX(Pos(i, j), aafParam);
+  tbb::parallel_for( tbb::blocked_range2d<int, int>(0, h, 0, w),[&](tbb::blocked_range2d<int, int> r) {
+    for (int i = r.rows().begin(); i < r.rows().end(); ++i) {
+      for (int j = r.cols().begin(); j < r.cols().end(); ++j) {
+        occlFilterY(Pos(i, j), aafParam);
+      }
     }
-  }
+  });
 
-  for (int i = 0; i < h; ++i) {
-    for (int j = 0; j < w; ++j) {
-      occlFilterY(Pos(i, j), aafParam);
-    }
-  }
 
   bool sppHeatMap = false, betaHeatMap = false;
 //  cout << "Min spp " << minSpp << endl;
@@ -554,31 +571,34 @@ void Minimal::render(unsigned char* pixels) {
 //  cout << "Max beta " << maxBeta << endl;
 
   int offset = 3;
-  for (int i = 0; i < h; ++i) {
-    for (int j = 0; j < w; ++j) {
-      Vec3f color;
-      if (sppHeatMap) {
-        color = heatMap(aafParam.spp[i][j], minSpp, maxSpp);
-        color = makeColor(color);
-      } else if (betaHeatMap) {
-        if (aafParam.useFilterOcc[i][j])
-          color = heatMap(aafParam.beta[i][j], minBeta, maxBeta);
-        else
-          color = Vec3f(0);
-        color = makeColor(color);
-      } else {
-        if (debug(i, j)) {
-          float f = aafParam.computeWxf(0, Pos(1, 1));
+  tbb::parallel_for( tbb::blocked_range2d<int, int>(0, h, 0, w),[&](tbb::blocked_range2d<int, int> r) {
+    for (int i = r.rows().begin(); i < r.rows().end(); ++i) {
+      for (int j = r.cols().begin(); j < r.cols().end(); ++j) {
+        Vec3f color;
+        if (sppHeatMap) {
+          color = heatMap(aafParam.spp[i][j], minSpp, maxSpp);
+          color = makeColor(color);
+        } else if (betaHeatMap) {
+          if (aafParam.useFilterOcc[i][j])
+            color = heatMap(aafParam.beta[i][j], minBeta, maxBeta);
+          else
+            color = Vec3f(0);
+          color = makeColor(color);
+        } else {
+          if (debug(i, j)) {
+            float f = aafParam.computeWxf(0, Pos(1, 1));
+          }
+          color = makeColor(aafParam.brdf[i][j] * aafParam.vis[i][j].x);
         }
-        color = makeColor(aafParam.brdf[i][j] * aafParam.vis[i][j].x);
-      }
 
-      // set color in BGR format
-      pixels[i * (w * offset) + j * offset + 0] = color.x;
-      pixels[i * (w * offset) + j * offset + 1] = color.y;
-      pixels[i * (w * offset) + j * offset + 2] = color.z;
+        // set color in BGR format
+        pixels[i * (w * offset) + j * offset + 0] = color.x;
+        pixels[i * (w * offset) + j * offset + 1] = color.y;
+        pixels[i * (w * offset) + j * offset + 2] = color.z;
+      }
     }
-  }
+  });
+
 
 //  saveImageToFile(pixels, w, h);
 
