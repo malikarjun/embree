@@ -55,6 +55,8 @@ public:
       normalRpp(normalRpp), bruteRpp(bruteRpp), maxRppPass(maxRppPass) {
   }
 
+  void reinit();
+
   float computeWxf( float s2, Pos pos);
 
   int computeSpp( float s1, float s2, float wxf, Pos pos);

@@ -195,7 +195,7 @@ void afterIntersection(RTCScene scene, RTCIntersectContext &context, RTCRayHit r
 
 bool debug(int i, int j) {
   // i -> h, j -> w
-  return i == 384 && j == 125;
+  return i == 344 && j == 152;
 }
 
 
@@ -430,11 +430,20 @@ void occlFilterY(Pos pos, AAFParam &aafParam) {
   aafParam.vis[x][y].x = blurredVis;
 }
 
-void saveImageToFile(unsigned char* image, int w, int h) {
+void saveImageToFile(unsigned char* pixels, int w, int h) {
   FreeImage_Initialise();
+  unsigned char* image = new unsigned char[h*w*3];
+  memcpy(image, pixels, h*w*3*sizeof(unsigned char));
+
+  for (int i = 0; i < h; ++i) {
+    for (int j = 0; j < w; ++j) {
+      swap(image[i * (w * 3) + j * 3 + 0], image[i * (w * 3) + j * 3 + 2]);
+    }
+  }
+
   FIBITMAP *img = FreeImage_ConvertFromRawBits(image, w, h, w * 3, 24, 0xFF0000, 0x00FF00, 0x0000FF, false);
 
-  if (FreeImage_Save(FIF_PNG, img, (BASE_PATH + "image.png").c_str(), 0)) {
+  if (FreeImage_Save(FIF_PNG, img, (BASE_PATH + "images/image.png").c_str(), 0)) {
     printf("Image saved successfully!");
   }
   FreeImage_DeInitialise();
@@ -443,7 +452,6 @@ void saveImageToFile(unsigned char* image, int w, int h) {
 
 void Minimal::init() {
   this->device = initializeDevice();
-
 
   bool enableBasic = false;
   string basicPath = enableBasic ? "/basic" : "";
@@ -465,10 +473,11 @@ void Minimal::init() {
 
   this->scene = initializeScene(this->device, objects);
   Camera camera = readCameraFile((BASE_PATH + "data" + basicPath + "/camera.txt").c_str());
+
   Light light = readLightFile((BASE_PATH + "data" + basicPath + "/light.txt").c_str());
 
   this->aafParam = AAFParam((int)camera.height, (int)camera.width, light, camera, objects, 7,
-                            20, 10);;
+                            20, 10);
 }
 
 void Minimal::destroy() {
@@ -479,8 +488,14 @@ void Minimal::destroy() {
 
 
 
-void Minimal::render(unsigned char* pixel) {
+void Minimal::render(unsigned char* pixels) {
+  aafParam.reinit();
   int h = aafParam.height, w = aafParam.width;
+
+//  cout << "camera eye" <<  aafParam.camera.eye.to_string() << endl;
+//  cout << "camera u" <<  aafParam.camera.u.to_string() << endl;
+//  cout << "camera v" <<  aafParam.camera.v.to_string() << endl;
+//  cout << "camera w" <<  aafParam.camera.w.to_string() << endl << endl;
 
   for (int i = 0; i < h; ++i) {
     for (int j = 0; j < w; ++j) {
@@ -537,6 +552,8 @@ void Minimal::render(unsigned char* pixel) {
 //  cout << "Max spp " << maxSpp << endl;
 //  cout << "Min beta " << minBeta << endl;
 //  cout << "Max beta " << maxBeta << endl;
+
+  int offset = 3;
   for (int i = 0; i < h; ++i) {
     for (int j = 0; j < w; ++j) {
       Vec3f color;
@@ -550,16 +567,20 @@ void Minimal::render(unsigned char* pixel) {
           color = Vec3f(0);
         color = makeColor(color);
       } else {
+        if (debug(i, j)) {
+          float f = aafParam.computeWxf(0, Pos(1, 1));
+        }
         color = makeColor(aafParam.brdf[i][j] * aafParam.vis[i][j].x);
       }
+
       // set color in BGR format
-      pixel[i * (w * 3) + j * 3 + 0] = color.x;
-      pixel[i * (w * 3) + j * 3 + 1] = color.y;
-      pixel[i * (w * 3) + j * 3 + 2] = color.z;
+      pixels[i * (w * offset) + j * offset + 0] = color.x;
+      pixels[i * (w * offset) + j * offset + 1] = color.y;
+      pixels[i * (w * offset) + j * offset + 2] = color.z;
     }
   }
 
-//  saveImageToFile(&(image[0][0]), w, h);
+//  saveImageToFile(pixels, w, h);
 
 }
 

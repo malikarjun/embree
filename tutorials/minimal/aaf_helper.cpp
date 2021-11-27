@@ -6,6 +6,40 @@
 
 const float sppMu = 2;
 
+void AAFParam::reinit() {
+  int h = this->height, w = this->width;
+  vector<vector<Vec3f> > vis(h, vector<Vec3f>(w, Vec3f(0.f))), brdf(h, vector<Vec3f>(w, Vec3f(0.f))),
+      worldLoc(h, vector<Vec3f>(w)), normal(h, vector<Vec3f>(w));
+  this->vis = vis;
+  this->brdf = brdf;
+  this->worldLoc = worldLoc;
+  this->normal = normal;
+
+  vector<vector<Vec2f>> slope(h, vector<Vec2f>(w)), slopeFilter1d(h, vector<Vec2f>(w));
+  this->slope = slope;
+  this->slopeFilter1d = slopeFilter1d;
+
+  vector<vector<int>> spp(h, vector<int>(w, (int)(normalRpp*normalRpp))), objId(h, vector<int>(w));
+  this->spp = spp;
+  this->objId;
+
+  vector<vector<float>> projDist(h, vector<float>(w)), visBlur1d(h, vector<float>(w)), beta(h, vector<float>(w));
+  this->projDist = projDist;
+  this->visBlur1d = visBlur1d;
+  this->beta = beta;
+
+  vector<vector<bool>>  useFilterN(h, vector<bool>(w, false)), useFilterOcc(h, vector<bool>(w, false)),
+  useFilterOcc1d(h, vector<bool>(w, false));
+  this->useFilterN = useFilterN;
+  this->useFilterOcc = useFilterOcc;
+  this->useFilterOcc1d = useFilterOcc1d;
+
+  this->firstPass = true;
+  this->blurOcc = true;
+
+
+}
+
 float AAFParam::computeWxf( float s2, Pos pos ) {
   return min(sppMu / (this->light.sigma * s2), 1 / (this->projDist[pos.x][pos.y] * (1 + s2)));
 }

@@ -23,7 +23,7 @@ public:
   AAFParam aafParam;
 
   void init();
-  void render(unsigned char* pixel);
+  void render(unsigned char* pixels);
   void destroy();
 };
 
