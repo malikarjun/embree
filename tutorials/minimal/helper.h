@@ -184,11 +184,12 @@ public:
   float sigma;
   RTCRay edge1, edge2;
   Light(){}
-  Light(Vec3f a, Vec3f b, Vec3f c, Vec3f I) {
+  Light(Vec3f a, Vec3f b, Vec3f c, Vec3f I, float sigma) {
     this->origin = a;
     setEdge1(a, b);
     setEdge2(a, c);
     this->I = I;
+    this->sigma = sigma;
   }
   Light(Vec3f a, RTCRay edge1, RTCRay edge2, Vec3f I) {
     this->origin = a;
@@ -210,6 +211,9 @@ public:
   void setNormal();
   void setEdge1(Vec3f a, Vec3f b);
   void setEdge2(Vec3f a, Vec3f c);
+
+  Vec3f getB();
+  Vec3f getC();
 
   float area();
 };

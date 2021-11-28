@@ -14,16 +14,23 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
   glViewport(0, 0, width, height);
 }
 // camera angle is given in degrees
-vector<float> camAngle;
-bool camMov = false;
+vector<float> camAngle, ltPos;
+bool camMov = false, ltMovX = false, ltMovY = false;
 
 void initMovementParams() {
   for (int i = 0; i < 360; i += 5) {
     camAngle.push_back(i);
   }
   vector<float> revCamAngle = camAngle;
-  reverse(camAngle.begin(), camAngle.end());
+  reverse(revCamAngle.begin(), revCamAngle.end());
   camAngle.insert(camAngle.end(), revCamAngle.begin(), revCamAngle.end());
+
+  for (float i = -2; i < 5; i += 1) {
+    ltPos.push_back(i);
+  }
+  vector<float> revLtPos = ltPos;
+  reverse(revLtPos.begin(), revLtPos.end());
+  ltPos.insert(ltPos.end(), revLtPos.begin(), revLtPos.end());
 }
 
 
@@ -43,6 +50,12 @@ void processInput(GLFWwindow *window, unsigned char* pixels, AAFParam& aafParam)
   } else if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
     camMov = !camMov;
     cout << "pressed c" << endl;
+  }  else if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) {
+    ltMovX = !ltMovX;
+    cout << "pressed x" << endl;
+  }  else if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS) {
+    ltMovY = !ltMovY;
+    cout << "pressed y" << endl;
   }
   aafParam.camera.setUpCameraCoordFrame();
 }
@@ -70,8 +83,9 @@ int main()
 
   // render loop
 
-  int camAngIdx = 0;
+  int camAngIdx = 0, ltPosX = 0, ltPosY = 0;
   Vec3f eye = minimal.aafParam.camera.eye;
+  Light light = minimal.aafParam.light;
   initMovementParams();
 
   while(!glfwWindowShouldClose(window)) {
@@ -88,7 +102,19 @@ int main()
       minimal.aafParam.camera.setUpCameraCoordFrame();
       camAngIdx %= camAngle.size();
     }
-
+    ltMovX = true;
+    if (ltMovX || ltMovY) {
+      Vec3f offset;
+      if (ltMovX) {
+        offset = Vec3f(ltPos[ltPosX++], 0, 0);
+        ltPosX %= ltPos.size();
+      } else {
+        offset = Vec3f(0, ltPos[ltPosY++], 0);
+        ltPosY %= ltPos.size();
+      }
+      minimal.aafParam.light = Light(light.origin + offset, light.getB() + offset, light.getC() + offset, light.I, light.sigma );
+      minimal.aafParam.light.init();
+    }
 
     minimal.render(pixels);
 

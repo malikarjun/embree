@@ -270,7 +270,7 @@ void afterIntersection(RTCScene scene, RTCIntersectContext &context, RTCRayHit r
 
 bool debug(int i, int j) {
   // i -> h, j -> w
-  return i == 344 && j == 152;
+  return i == 240 && j == 320;
 }
 
 

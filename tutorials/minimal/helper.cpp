@@ -371,6 +371,14 @@ void Light::setEdge2(Vec3f a, Vec3f c) {
   setNormal();
 }
 
+Vec3f Light::getB() {
+  return this->origin + getDir(this->edge1) * this->edge1.tfar;
+}
+
+Vec3f Light::getC() {
+  return this->origin + getDir(this->edge2) * this->edge2.tfar;
+}
+
 float Light::area() {
   float base = this->edge1.tfar;
   float theta = acos(getDir(this->edge1).dot(getDir(this->edge2)));
