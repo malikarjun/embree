@@ -14,6 +14,8 @@
 using std::cos;
 using std::sin;
 using std::acos;
+using std::vector;
+using std::string;
 
 
 float genRandomFloat();
@@ -113,6 +115,12 @@ RTCRay createRay(Vec3f org, Vec3f dir, float tnear = 0.0001, float tfar = std::n
 
 RTCRayHit createRayHit(Vec3f org, Vec3f dir, float tnear = 0.0001, float tfar = std::numeric_limits<float>::infinity());
 
+RTCRayHitNp* createRayHitNp(Vec3f org, vector<Vec3f> points, float tnear = 0.0001, float tfar = std::numeric_limits<float>::infinity());
+
+void setVal(unsigned int* arr, unsigned int val, int size);
+
+void setVal(float* arr, float val, int size) ;
+
 class Camera {
 public:
   Vec3f eye, center, up;
@@ -173,8 +181,7 @@ public:
   float area();
 };
 
-using std::vector;
-using std::string;
+
 
 
 

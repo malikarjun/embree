@@ -151,6 +151,78 @@ RTCRayHit createRayHit(Vec3f org, Vec3f dir, float tnear, float tfar) {
   return rayHit;
 }
 
+void setVal(float* arr, float val, int size) {
+  for (int i = 0; i < size; ++i) {
+    arr[i] = val;
+  }
+}
+
+void setVal(unsigned int* arr, unsigned int val, int size) {
+  for (int i = 0; i < size; ++i) {
+    arr[i] = val;
+  }
+}
+
+/**
+ * Generate stream of rays originating from a single point.
+ * @return
+ */
+RTCRayHitNp* createRayHitNp(Vec3f org, vector<Vec3f> points, float tnear, float tfar) {
+  int n = points.size();
+  auto *rayHitNp = static_cast<RTCRayHitNp *>(malloc(sizeof(RTCRayHitNp)));
+
+  rayHitNp->ray.org_x = new float[n];
+  rayHitNp->ray.org_y = new float[n];
+  rayHitNp->ray.org_z = new float[n];
+
+  rayHitNp->ray.dir_x = new float[n];
+  rayHitNp->ray.dir_y = new float[n];
+  rayHitNp->ray.dir_z = new float[n];
+
+// misc
+  rayHitNp->ray.time = new float[n];
+  rayHitNp->ray.id = new unsigned int[n];
+
+  rayHitNp->ray.tnear = new float[n];
+  for (int i = 0; i < n; ++i) {
+    rayHitNp->ray.tnear[i] = 0.001;
+  }
+  rayHitNp->ray.tfar = new float[n];
+  for (int i = 0; i < n; ++i) {
+    rayHitNp->ray.tfar[i] = std::numeric_limits<float>::infinity();
+  }
+
+  rayHitNp->ray.mask = new unsigned int[n];
+  setVal(rayHitNp->ray.mask, -1, n);
+  rayHitNp->ray.flags = new unsigned int[n];
+  setVal(rayHitNp->ray.flags, 0, n);
+
+  rayHitNp->hit.geomID = new unsigned int[n];
+  setVal(rayHitNp->hit.geomID, RTC_INVALID_GEOMETRY_ID, n);
+
+// misc
+  rayHitNp->hit.primID = new unsigned int[n];
+  rayHitNp->hit.instID[0] = new unsigned int[n];
+  rayHitNp->hit.u = new float[n];
+  rayHitNp->hit.v = new float[n];
+  rayHitNp->hit.Ng_x = new float[n];
+  rayHitNp->hit.Ng_y = new float[n];
+  rayHitNp->hit.Ng_z = new float[n];
+
+
+  for (int i = 0; i < n; ++i) {
+    rayHitNp->ray.org_x[i] = org.x;
+    rayHitNp->ray.org_y[i] = org.y;
+    rayHitNp->ray.org_z[i] = org.z;
+
+    Vec3f dir = points[i] - org;
+    rayHitNp->ray.dir_x[i] = dir.x;
+    rayHitNp->ray.dir_y[i] = dir.y;
+    rayHitNp->ray.dir_z[i] = dir.z;
+  }
+  return rayHitNp;
+}
+
 void Camera::setFovy(float fovy) {
   this->fovy = degToRadian(fovy);
 }

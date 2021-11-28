@@ -158,6 +158,78 @@ void afterIntersection(RTCScene scene, RTCIntersectContext &context, RTCRayHit r
 
   Vec3f surfNormal =  getSurfNormal(rayhit.hit);
   float d2min = distToLight, d2max = -1;
+
+/*
+  tbb::parallel_for( tbb::blocked_range<int>(0, samplePoints.size()), [&](tbb::blocked_range<int> r) {
+    for (int i=r.begin(); i<r.end(); ++i) {
+      Vec3f sample = samplePoints[i];
+      float strength = light.strength(sample);
+      Vec3f sampleDir = normalize(sample - hitPoint);
+
+      if (surfNormal.dot(sampleDir) > 0) {
+        aafParam.useFilterN[x][y] = true;
+        aafParam.vis[x][y].z += strength;
+
+        RTCRayHit shadowRayHit = createRayHit(hitPoint, sample - hitPoint, 0.001);
+        rtcIntersect1(scene, &context, &shadowRayHit);
+        float d1 = norm(sample - hitPoint);
+        // if the shadow ray is occluded
+        if (shadowRayHit.hit.geomID != RTC_INVALID_GEOMETRY_ID || shadowRayHit.ray.tfar < d1) {
+          aafParam.useFilterOcc[x][y] = true;
+          float dprime = shadowRayHit.ray.tfar;
+          d2min = min(d2min, d1 - dprime);
+          d2max = max(d2max, d1 - dprime);
+          if (dprime < 0.000000001) {
+            d2min = d1;
+          }
+        } else {
+          aafParam.vis[x][y].y += strength;
+        }
+      }
+    }
+  });
+*/
+
+/*
+  vector<Vec3f> fSamplePoints;
+  int cnt = 0;
+  for (Vec3f sample : samplePoints) {
+    Vec3f sampleDir = normalize(sample - hitPoint);
+    if (surfNormal.dot(sampleDir) > 0) {
+      fSamplePoints.push_back(sample);
+    }
+  }
+
+
+  int n = fSamplePoints.size();
+
+  RTCRayHitNp* shadowRayHitNp = createRayHitNp(hitPoint, fSamplePoints, 0.001);
+
+  rtcIntersectNp(scene, &context, shadowRayHitNp, n);
+
+  for (int i = 0; i < n; ++i) {
+    Vec3f sample = fSamplePoints[i];
+    float strength = light.strength(sample);
+
+    aafParam.useFilterN[x][y] = true;
+    aafParam.vis[x][y].z += strength;
+
+    float d1 = norm(sample - hitPoint);
+    // if the shadow ray is occluded
+    if (shadowRayHitNp->hit.geomID[i] != RTC_INVALID_GEOMETRY_ID || shadowRayHitNp->ray.tfar[i] < d1) {
+      aafParam.useFilterOcc[x][y] = true;
+      float dprime = shadowRayHitNp->ray.tfar[i];
+      d2min = min(d2min, d1 - dprime);
+      d2max = max(d2max, d1 - dprime);
+      if (dprime < 0.000000001) {
+        d2min = d1;
+      }
+    } else {
+      aafParam.vis[x][y].y += strength;
+    }
+  }
+  free(shadowRayHitNp);*/
+
   for (Vec3f sample : samplePoints) {
     float strength = light.strength(sample);
     Vec3f sampleDir = normalize(sample - hitPoint);
@@ -183,6 +255,8 @@ void afterIntersection(RTCScene scene, RTCIntersectContext &context, RTCRayHit r
       }
     }
   }
+
+
   float s1 = distToLight/d2min - 1, s2 = distToLight/d2max - 1;
   aafParam.slope[x][y].x = s1;
   aafParam.slope[x][y].y = s2;
@@ -454,28 +528,23 @@ void saveImageToFile(unsigned char* pixels, int w, int h) {
 void Minimal::init() {
   this->device = initializeDevice();
 
-  bool enableBasic = false;
-  string basicPath = enableBasic ? "/basic" : "";
+  string obj = "camel";
 
-  vector<string> objFileNames;
-  if (enableBasic) {
-    objFileNames = {"data" + basicPath + "/floor.obj"
-//                    , "data" + basicPath + "/light.obj"
-    };
-  } else {
-    objFileNames = {"data/floor.obj", "data/grid1.obj"};
-  }
+  vector<string> objFileNames = {"data/" + obj + "/floor.obj"
+                                 , "data/" + obj + "/" + obj  + ".obj"
+  };
+
 
   vector<ObjMesh> objects;
   for (auto fileName: objFileNames) {
     objects.push_back(readObjFile((BASE_PATH + fileName).c_str(),
-                                  (BASE_PATH + "data" + basicPath + "/material.mtl").c_str()));
+                                  (BASE_PATH + "data/" + obj + "/material.mtl").c_str()));
   }
 
   this->scene = initializeScene(this->device, objects);
-  Camera camera = readCameraFile((BASE_PATH + "data" + basicPath + "/camera.txt").c_str());
+  Camera camera = readCameraFile((BASE_PATH + "data/" + obj  + "/camera.txt").c_str());
 
-  Light light = readLightFile((BASE_PATH + "data" + basicPath + "/light.txt").c_str());
+  Light light = readLightFile((BASE_PATH + "data/" + obj + "/light.txt").c_str());
 
   this->aafParam = AAFParam((int)camera.height, (int)camera.width, light, camera, objects, 7,
                             20, 10);
@@ -506,6 +575,12 @@ void Minimal::render(unsigned char* pixels) {
      }
     }
   });
+
+//  for (int i = 0; i < h; ++i) {
+//    for (int j = 0; j < w; ++j) {
+//      initialSampling(this->scene, Pos(i, j), aafParam);
+//    }
+//  }
 
   aafParam.firstPass = false;
   int minSpp = numeric_limits<int>::infinity(), maxSpp = -1;
