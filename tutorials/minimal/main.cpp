@@ -13,6 +13,19 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
   glViewport(0, 0, width, height);
 }
+// camera angle is given in degrees
+vector<float> camAngle;
+bool camMov = false;
+
+void initMovementParams() {
+  for (int i = 0; i < 360; i += 5) {
+    camAngle.push_back(i);
+  }
+  vector<float> revCamAngle = camAngle;
+  reverse(camAngle.begin(), camAngle.end());
+  camAngle.insert(camAngle.end(), revCamAngle.begin(), revCamAngle.end());
+}
+
 
 void processInput(GLFWwindow *window, unsigned char* pixels, AAFParam& aafParam)
 {
@@ -21,34 +34,19 @@ void processInput(GLFWwindow *window, unsigned char* pixels, AAFParam& aafParam)
   }
   if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
     aafParam.camera.eye.x -= 1;
-    cout << "pressed left" << endl;
   } else if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
     aafParam.camera.eye.x += 1;
-    cout << "pressed right" << endl;
+  } else  if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+    aafParam.camera.eye.y += 1;
+  } else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+    aafParam.camera.eye.y -= 1;
+  } else if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
+    camMov = !camMov;
+    cout << "pressed c" << endl;
   }
   aafParam.camera.setUpCameraCoordFrame();
 }
 
-
-/*int main() {
-  auto values = std::vector<double>(10000);
-  std::mutex m;
-  int width = 640, height = 480;
-
-
-  tbb::parallel_for( tbb::blocked_range2d<int, int>(0,width, 0, height),
-                     [&](tbb::blocked_range2d<int, int> r) {
-    m.lock();
-    for (int i=r.rows().begin(); i<r.rows().end(); ++i) {
-      for (int j = r.cols().begin(); j < r.cols().end(); ++j) {
-        cout << "(" << i << ", " << j << ")" << endl;
-      }
-    }
-    m.unlock();
-  });
-
-  return 0;
-}*/
 
 int main()
 {
@@ -71,6 +69,11 @@ int main()
   minimal.init();
 
   // render loop
+
+  int camAngIdx = 0;
+  Vec3f eye = minimal.aafParam.camera.eye;
+  initMovementParams();
+
   while(!glfwWindowShouldClose(window)) {
 
     auto start_time = std::chrono::high_resolution_clock::now();
@@ -79,8 +82,13 @@ int main()
 
     // rendering commands here
     glClear(GL_COLOR_BUFFER_BIT);
-//    minimal.aafParam.camera.eye.x -= 0.3;
-//    minimal.aafParam.camera.setUpCameraCoordFrame();
+
+    if (camMov) {
+      minimal.aafParam.camera.eye = rotMat(Vec3f(0, camAngle[++camAngIdx], 0)) * eye;
+      minimal.aafParam.camera.setUpCameraCoordFrame();
+      camAngIdx %= camAngle.size();
+    }
+
 
     minimal.render(pixels);
 

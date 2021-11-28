@@ -93,6 +93,39 @@ Vec3f operator/(Vec3f vec, const float val);
 
 Vec3f operator/(const float val, Vec3f vec);
 
+class Mat3f {
+public:
+  Vec3f x, y, z;
+
+  // identity matrix for default constructor
+  Mat3f() {
+    this->x = Vec3f(1, 0, 0);
+    this->y = Vec3f(0, 1, 0);
+    this->z = Vec3f(1, 0, 1);
+  }
+  Mat3f(float x0, float x1, float x2, float y0, float y1, float y2, float z0, float z1, float z2) {
+    this->x = Vec3f(x0, x1, x2);
+    this->y = Vec3f(y0, y1, y2);
+    this->z = Vec3f(z0, z1, z2);
+  }
+
+  Mat3f operator+(Mat3f val);
+
+  Mat3f operator*(float val);
+
+  Mat3f operator*(Mat3f val);
+
+  Mat3f operator*=(float val);
+
+};
+
+Vec3f operator*(Mat3f mat, Vec3f vec);
+
+Mat3f rotMat(const float deg, const Vec3f axis);
+
+Mat3f rotMat(Vec3f rot);
+
+
 Vec3f cross(Vec3f a, Vec3f b);
 
 float norm(Vec3f vec);

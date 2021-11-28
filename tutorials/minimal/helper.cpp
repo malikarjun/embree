@@ -86,6 +86,79 @@ Vec3f operator/(const float val, Vec3f vec) {
   return vec / val;
 }
 
+Mat3f Mat3f::operator+(const Mat3f val) {
+  Mat3f ans;
+  ans.x = this->x + val.x;
+  ans.y = this->y + val.y;
+  ans.z = this->z + val.z;
+  return ans;
+}
+
+Mat3f Mat3f::operator*(const float val) {
+  Mat3f ans;
+  ans.x = this->x * val;
+  ans.y = this->y * val;
+  ans.z = this->z * val;
+  return ans;
+}
+
+Mat3f Mat3f::operator*(const Mat3f val) {
+  Mat3f ans;
+  ans.x.x = this->x.x*val.x.x + this->x.y * val.y.x + this->x.z * val.z.x;
+  ans.x.y = this->x.x*val.x.y + this->x.y * val.y.y + this->x.z * val.z.y;
+  ans.x.z = this->x.x*val.x.z + this->x.y * val.y.z + this->x.z * val.z.z;
+
+  ans.y.x = this->y.x*val.x.x + this->y.y * val.y.x + this->y.z * val.z.x;
+  ans.y.y = this->y.x*val.x.y + this->y.y * val.y.y + this->y.z * val.z.y;
+  ans.y.z = this->y.x*val.x.z + this->y.y * val.y.z + this->y.z * val.z.z;
+
+  ans.z.x = this->z.x*val.x.x + this->z.y * val.y.x + this->z.z * val.z.x;
+  ans.z.y = this->z.x*val.x.y + this->z.y * val.y.y + this->z.z * val.z.y;
+  ans.z.z = this->z.x*val.x.z + this->z.y * val.y.z + this->z.z * val.z.z;
+
+  return ans;
+}
+
+Mat3f Mat3f::operator*=(const float val) {
+  this->x = this->x * val;
+  this->y = this->y * val;
+  this->z = this->z * val;
+}
+
+Vec3f operator*(Mat3f mat, Vec3f vec) {
+  Vec3f val;
+  val.x = mat.x.dot(vec);
+  val.y = mat.y.dot(vec);
+  val.z = mat.z.dot(vec);
+  return val;
+}
+
+Mat3f rotMat(const float deg, const Vec3f axis) {
+  float x = axis.x, y = axis.y, z = axis.z;
+  const float rad = degToRadian(deg);
+
+  Mat3f first_term;
+  first_term *= cos(rad);
+
+  Mat3f second_term(x*x, x*y, x*z, x*y, y*y, y*z, x*z, y*z, z*z);
+  second_term *= (1 - cos(rad));
+
+  Mat3f third_term(0, -z, y, z, 0, -x, -y, x, 0);
+  third_term *= sin(rad);
+
+  return first_term + second_term + third_term;
+}
+
+Mat3f rotMat(Vec3f rot) {
+  rot.x = degToRadian(rot.x);
+  rot.y = degToRadian(rot.y);
+  rot.z = degToRadian(rot.z);
+  Mat3f rz(cos(rot.z), -sin(rot.z), 0, sin(rot.z), cos(rot.z), 0, 0, 0, 1);
+  Mat3f ry(cos(rot.y), 0, sin(rot.y), 0, 1, 0, -sin(rot.y), 0 , cos(rot.y));
+  Mat3f rx(1, 0, 0, 0, cos(rot.x), -sin(rot.x), 0, sin(rot.x), cos(rot.x));
+  return rz * ry * rx;
+}
+
 Vec3f cross(Vec3f a, Vec3f b) {
   return Vec3f(a.y*b.z - a.z*b.y, a.z*b.x - a.z*b.z, a.x*b.y - a.y*b.x);
 }
@@ -100,7 +173,10 @@ Vec3f normalize(Vec3f vec) {
 }
 
 float degToRadian(float deg) {
-  return 0.0174533f * deg;
+  float val =  (M_PI / 180) *  deg;
+  if (val > 2*M_PI)
+    val -= 2*M_PI;
+  return val;
 }
 
 Vec3f reverse(Vec3f vec) {
