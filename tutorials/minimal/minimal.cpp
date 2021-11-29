@@ -22,6 +22,11 @@
 RTC_NAMESPACE_USE
 #endif
 
+bool debug(int i, int j) {
+  // i -> h, j -> w
+  return i == 239 && j == 252;
+}
+
 /*
  * We will register this error handler with the device in initializeDevice(),
  * so that we are automatically informed on errors.
@@ -268,10 +273,6 @@ void afterIntersection(RTCScene scene, RTCIntersectContext &context, RTCRayHit r
   }
 }
 
-bool debug(int i, int j) {
-  // i -> h, j -> w
-  return i == 240 && j == 320;
-}
 
 
 void initialSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
@@ -303,7 +304,7 @@ void initialSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
   float projDist = 2.f / aafParam.height * (rayhit.ray.tfar * tan(aafParam.camera.fovy/2));
   aafParam.projDist[x][y] = projDist;
   float wxf = aafParam.computeWxf(s2, pos);
-  aafParam.beta[x][y] = 1/wxf;
+  aafParam.beta[x][y] = max(0.f, 1/wxf);
 
   aafParam.vis[x][y].x = 1;
   int theoreticalSpp = 0;
@@ -389,7 +390,7 @@ void adaptiveSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
   float wxf = aafParam.computeWxf(curSlope.y, pos);
   int targetSpp = aafParam.computeSpp(curSlope.x, curSlope.y, wxf, pos);
   aafParam.spp[x][y] = targetSpp;
-  aafParam.beta[x][y] = 1/wxf;
+  aafParam.beta[x][y] = max(0.f, 1/wxf);
 
   int curSpp = (int) (aafParam.normalRpp * aafParam.normalRpp);
   if (curSpp < targetSpp) {
@@ -663,19 +664,17 @@ void Minimal::render(unsigned char* pixels) {
           color = heatMap(aafParam.spp[i][j], minSpp, maxSpp);
           color = makeColor(color);
         } else if (betaHeatMap) {
-          if (aafParam.useFilterOcc[i][j])
+          if (aafParam.useFilterOcc[i][j] && aafParam.beta[i][j] > 0) {
             color = heatMap(aafParam.beta[i][j], minBeta, maxBeta);
-          else
+          } else {
             color = Vec3f(0);
+          }
           color = makeColor(color);
         } else {
-          if (debug(i, j)) {
-            float f = aafParam.computeWxf(0, Pos(1, 1));
-          }
           color = makeColor(aafParam.brdf[i][j] * aafParam.vis[i][j].x);
         }
 
-        // set color in BGR format
+        // set color in RGB format
         pixels[i * (w * offset) + j * offset + 0] = color.x;
         pixels[i * (w * offset) + j * offset + 1] = color.y;
         pixels[i * (w * offset) + j * offset + 2] = color.z;
