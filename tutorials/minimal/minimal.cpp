@@ -525,10 +525,10 @@ void saveImageToFile(unsigned char* pixels, int w, int h) {
 }
 
 
-void Minimal::init() {
+void Minimal::init(string scene) {
   this->device = initializeDevice();
 
-  string obj = "camel";
+  string obj = scene;
 
   vector<string> objFileNames = {"data/" + obj + "/floor.obj"
                                  , "data/" + obj + "/" + obj  + ".obj"

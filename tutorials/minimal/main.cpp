@@ -61,7 +61,7 @@ void processInput(GLFWwindow *window, unsigned char* pixels, AAFParam& aafParam)
 }
 
 
-int main()
+int main(int argc, char** argv)
 {
   int w = 640, h = 480;
   glfwInit();
@@ -79,7 +79,12 @@ int main()
   unsigned char* pixels = new unsigned char[h * w * 3];
 
   Minimal minimal;
-  minimal.init();
+  if (argc > 1) {
+    minimal.init(string(argv[1]));
+  } else {
+    minimal.init("grid");
+  }
+
 
   // render loop
 
@@ -102,7 +107,6 @@ int main()
       minimal.aafParam.camera.setUpCameraCoordFrame();
       camAngIdx %= camAngle.size();
     }
-    ltMovX = true;
     if (ltMovX || ltMovY) {
       Vec3f offset;
       if (ltMovX) {

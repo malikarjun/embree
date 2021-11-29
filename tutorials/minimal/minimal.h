@@ -22,7 +22,7 @@ public:
   RTCDevice device;
   AAFParam aafParam;
 
-  void init();
+  void init(string scene);
   void render(unsigned char* pixels);
   void destroy();
 };
