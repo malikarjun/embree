@@ -529,10 +529,19 @@ void Minimal::init(string scene) {
   this->device = initializeDevice();
 
   string obj = scene;
+  vector<string> objFileNames;
+  if (scene == "grid") {
+    objFileNames = {"data/" + obj + "/floor.obj"
+        , "data/" + obj + "/" + obj  + "1.obj"
+        , "data/" + obj + "/" + obj  + "2.obj"
+        , "data/" + obj + "/" + obj  + "3.obj"
+    };
+  } else {
+    objFileNames = {"data/" + obj + "/floor.obj"
+        , "data/" + obj + "/" + obj  + ".obj"
+    };
+  }
 
-  vector<string> objFileNames = {"data/" + obj + "/floor.obj"
-                                 , "data/" + obj + "/" + obj  + ".obj"
-  };
 
 
   vector<ObjMesh> objects;

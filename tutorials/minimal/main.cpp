@@ -69,7 +69,7 @@ int main(int argc, char** argv)
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR,0);
   glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_FALSE);
 
-  GLFWwindow* window = glfwCreateWindow(w, h, "LearnOpenGL", nullptr, nullptr);
+  GLFWwindow* window = glfwCreateWindow(w, h, "soft shadows", nullptr, nullptr);
   glfwMakeContextCurrent(window);
 
 //  glfwSwapInterval(1);
