@@ -48,14 +48,23 @@ void processInput(GLFWwindow *window, unsigned char* pixels, AAFParam& aafParam)
   } else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
     aafParam.camera.eye.y -= 1;
   } else if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
-    camMov = !camMov;
+    camMov = true;
     cout << "pressed c" << endl;
-  }  else if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) {
-    ltMovX = !ltMovX;
+  }  else if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS) {
+    camMov = false;
+    cout << "pressed v" << endl;
+  } else if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) {
+    ltMovX = true;
     cout << "pressed x" << endl;
-  }  else if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS) {
-    ltMovY = !ltMovY;
+  } else if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS) {
+    ltMovX = false;
+    cout << "pressed z" << endl;
+  } else if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS) {
+    ltMovY = true;
     cout << "pressed y" << endl;
+  } else if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) {
+    ltMovY = false;
+    cout << "pressed t" << endl;
   }
   aafParam.camera.setUpCameraCoordFrame();
 }
