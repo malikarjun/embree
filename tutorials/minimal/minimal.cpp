@@ -577,6 +577,7 @@ void Minimal::render(unsigned char* pixels) {
 //  cout << "camera v" <<  aafParam.camera.v.to_string() << endl;
 //  cout << "camera w" <<  aafParam.camera.w.to_string() << endl << endl;
 
+  auto p1_start_time = std::chrono::high_resolution_clock::now();
   tbb::parallel_for( tbb::blocked_range2d<int, int>(0, h, 0, w),
                      [&](tbb::blocked_range2d<int, int> r) {
     for (int i = r.rows().begin(); i < r.rows().end(); ++i) {
@@ -585,6 +586,8 @@ void Minimal::render(unsigned char* pixels) {
      }
     }
   });
+  cout << "time (ms) for 1st pass : " << (chrono::high_resolution_clock::now() - p1_start_time) / chrono::milliseconds(1)  << endl;
+
 
 //  for (int i = 0; i < h; ++i) {
 //    for (int j = 0; j < w; ++j) {
@@ -592,6 +595,7 @@ void Minimal::render(unsigned char* pixels) {
 //    }
 //  }
 
+  auto bn_start_time = std::chrono::high_resolution_clock::now();
   aafParam.firstPass = false;
   int minSpp = numeric_limits<int>::infinity(), maxSpp = -1;
   float minBeta = numeric_limits<float>::infinity(), maxBeta = -numeric_limits<float>::infinity();
@@ -612,10 +616,13 @@ void Minimal::render(unsigned char* pixels) {
       }
     }
   });
+  cout << "time (ms) for beta/n compute : " << (chrono::high_resolution_clock::now() - bn_start_time) / chrono::milliseconds(1)  << endl;
+
 
   bool disableAdaptiveSamp = false;
 
   if (!disableAdaptiveSamp) {
+    auto as_start_time = std::chrono::high_resolution_clock::now();
 
     tbb::parallel_for( tbb::blocked_range2d<int, int>(0, h, 0, w),[&](tbb::blocked_range2d<int, int> r) {
       for (int i = r.rows().begin(); i < r.rows().end(); ++i) {
@@ -629,8 +636,10 @@ void Minimal::render(unsigned char* pixels) {
         }
       }
     });
+    cout << "time (ms) for 2nd pass : " << (chrono::high_resolution_clock::now() - as_start_time) / chrono::milliseconds(1)  << endl;
 
   }
+  auto af_start_time = std::chrono::high_resolution_clock::now();
 
   tbb::parallel_for( tbb::blocked_range2d<int, int>(0, h, 0, w),[&](tbb::blocked_range2d<int, int> r) {
     for (int i = r.rows().begin(); i < r.rows().end(); ++i) {
@@ -647,6 +656,8 @@ void Minimal::render(unsigned char* pixels) {
       }
     }
   });
+
+  cout << "time (ms) for adaptive filtering : " << (chrono::high_resolution_clock::now() - af_start_time) / chrono::milliseconds(1)  << endl;
 
 
   bool sppHeatMap = false, betaHeatMap = false;
