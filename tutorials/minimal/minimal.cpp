@@ -24,7 +24,7 @@ RTC_NAMESPACE_USE
 
 bool debug(int i, int j) {
   // i -> h, j -> w
-  return i == 239 && j == 252;
+  return i == 115 && j == 234;
 }
 
 /*
@@ -315,7 +315,7 @@ void initialSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
   if (aafParam.useFilterOcc[x][y]) {
     theoreticalSpp = aafParam.computeSpp(s1, s2, wxf, pos);
   }
-  aafParam.spp[x][y] = min(theoreticalSpp, aafParam.bruteRpp * aafParam.bruteRpp);
+  aafParam.spp[x][y] += min(theoreticalSpp, aafParam.bruteRpp * aafParam.bruteRpp);
 
   if (aafParam.useFilterOcc[x][y] && aafParam.vis[x][y].z > 0.01) {
     // y and z are updated in the afterIntersection fn
@@ -381,10 +381,6 @@ void slopeFilterY(Pos pos, AAFParam &aafParam) {
 void adaptiveSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
   int x = pos.x, y = pos.y;
 
-  if (debug(x, y)) {
-    float f = aafParam.computeWxf(0, pos);
-  }
-
   if (aafParam.brdf[x][y].x < -1) {
     return;
   }
@@ -394,6 +390,10 @@ void adaptiveSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
   int targetSpp = aafParam.computeSpp(curSlope.x, curSlope.y, wxf, pos);
   aafParam.spp[x][y] = targetSpp;
   aafParam.beta[x][y] = 1/wxf;
+
+  if (debug(x, y)) {
+    float f = aafParam.computeWxf(0, pos);
+  }
 
   int curSpp = (int) (aafParam.normalRpp * aafParam.normalRpp);
   if (curSpp < targetSpp) {
@@ -411,8 +411,12 @@ void adaptiveSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
       return;
     }
     afterIntersection(scene, context, rayhit, pos, aafParam.objects, aafParam);
-    aafParam.spp[x][y] = targetSpp;
+    if (aafParam.useFilterOcc[x][y] && aafParam.vis[x][y].z > 0.01) {
+      // y and z are updated in the afterIntersection fn
+      aafParam.vis[x][y].x = aafParam.vis[x][y].y / aafParam.vis[x][y].z;
+    }
   }
+  aafParam.spp[x][y] = max(targetSpp, curSpp);
 }
 
 void occlFilter(float& blurredVisSum, float& sumWeight, Vec3f& curWorldLoc, Vec3f curN,
@@ -509,7 +513,7 @@ void occlFilterY(Pos pos, AAFParam &aafParam) {
   aafParam.vis[x][y].x = blurredVis;
 }
 
-void saveImageToFile(unsigned char* pixels, int w, int h) {
+void saveImageToFile(unsigned char* pixels, int w, int h, string fileName = "image") {
   FreeImage_Initialise();
   unsigned char* image = new unsigned char[h*w*3];
   memcpy(image, pixels, h*w*3*sizeof(unsigned char));
@@ -522,8 +526,8 @@ void saveImageToFile(unsigned char* pixels, int w, int h) {
 
   FIBITMAP *img = FreeImage_ConvertFromRawBits(image, w, h, w * 3, 24, 0xFF0000, 0x00FF00, 0x0000FF, false);
 
-  if (FreeImage_Save(FIF_PNG, img, (BASE_PATH + "images/image.png").c_str(), 0)) {
-    printf("Image saved successfully!");
+  if (FreeImage_Save(FIF_PNG, img, (BASE_PATH + "images/" + fileName +".png").c_str(), 0)) {
+    printf("Image saved successfully!\n");
   }
   FreeImage_DeInitialise();
 }
@@ -546,8 +550,6 @@ void Minimal::init(string scene) {
     };
   }
 
-
-
   vector<ObjMesh> objects;
   for (auto fileName: objFileNames) {
     objects.push_back(readObjFile((BASE_PATH + fileName).c_str(),
@@ -559,7 +561,7 @@ void Minimal::init(string scene) {
 
   Light light = readLightFile((BASE_PATH + "data/" + obj + "/light.txt").c_str());
 
-  this->aafParam = AAFParam((int)camera.height, (int)camera.width, light, camera, objects, 7,
+  this->aafParam = AAFParam((int)camera.height, (int)camera.width, light, camera, objects, 3,
                             20, 10, 10);
 }
 
@@ -570,7 +572,7 @@ void Minimal::destroy() {
 }
 
 
-bool capTime = false;
+bool LOG = false;
 
 void Minimal::render(unsigned char* pixels) {
   aafParam.reinit();
@@ -590,9 +592,10 @@ void Minimal::render(unsigned char* pixels) {
      }
     }
   });
-  if (capTime)
+  if (LOG)
   cout << "time (ms) for 1st pass : " << (chrono::high_resolution_clock::now() - p1_start_time) / chrono::milliseconds(1)  << endl;
 
+//  saveSpp(aafParam, "spp_beforeAS");
 
 //  for (int i = 0; i < h; ++i) {
 //    for (int j = 0; j < w; ++j) {
@@ -621,13 +624,13 @@ void Minimal::render(unsigned char* pixels) {
       }
     }
   });
-  if (capTime)
+  if (LOG)
   cout << "time (ms) for beta/n compute : " << (chrono::high_resolution_clock::now() - bn_start_time) / chrono::milliseconds(1)  << endl;
 
 
-  bool disableAdaptiveSamp = false;
+  bool adapSampling = true;
 
-  if (!disableAdaptiveSamp) {
+  if (adapSampling) {
     auto as_start_time = std::chrono::high_resolution_clock::now();
 
     tbb::parallel_for( tbb::blocked_range2d<int, int>(0, h, 0, w),[&](tbb::blocked_range2d<int, int> r) {
@@ -642,42 +645,51 @@ void Minimal::render(unsigned char* pixels) {
         }
       }
     });
-    if (capTime)
+//    saveSpp(aafParam, "spp_afterAS");
+    if (LOG)
     cout << "time (ms) for 2nd pass : " << (chrono::high_resolution_clock::now() - as_start_time) / chrono::milliseconds(1)  << endl;
 
   }
+  bool adapFiltering = true;
   auto af_start_time = std::chrono::high_resolution_clock::now();
 
-  tbb::parallel_for( tbb::blocked_range2d<int, int>(0, h, 0, w),[&](tbb::blocked_range2d<int, int> r) {
-    for (int i = r.rows().begin(); i < r.rows().end(); ++i) {
-      for (int j = r.cols().begin(); j < r.cols().end(); ++j) {
-        occlFilterX(Pos(i, j), aafParam);
+  if (adapFiltering) {
+    tbb::parallel_for( tbb::blocked_range2d<int, int>(0, h, 0, w),[&](tbb::blocked_range2d<int, int> r) {
+      for (int i = r.rows().begin(); i < r.rows().end(); ++i) {
+        for (int j = r.cols().begin(); j < r.cols().end(); ++j) {
+          occlFilterX(Pos(i, j), aafParam);
+        }
       }
-    }
-  });
+    });
 
-  tbb::parallel_for( tbb::blocked_range2d<int, int>(0, h, 0, w),[&](tbb::blocked_range2d<int, int> r) {
-    for (int i = r.rows().begin(); i < r.rows().end(); ++i) {
-      for (int j = r.cols().begin(); j < r.cols().end(); ++j) {
-        occlFilterY(Pos(i, j), aafParam);
+    tbb::parallel_for( tbb::blocked_range2d<int, int>(0, h, 0, w),[&](tbb::blocked_range2d<int, int> r) {
+      for (int i = r.rows().begin(); i < r.rows().end(); ++i) {
+        for (int j = r.cols().begin(); j < r.cols().end(); ++j) {
+          occlFilterY(Pos(i, j), aafParam);
+        }
       }
-    }
-  });
-  if (capTime)
+    });
+  }
+
+  if (LOG)
   cout << "time (ms) for adaptive filtering : " << (chrono::high_resolution_clock::now() - af_start_time) / chrono::milliseconds(1)  << endl;
 
 
   bool sppHeatMap = false, betaHeatMap = false;
-//  cout << "Min spp " << minSpp << endl;
-//  cout << "Max spp " << maxSpp << endl;
-//  cout << "Min beta " << minBeta << endl;
-//  cout << "Max beta " << maxBeta << endl;
+  if (LOG) {
+    cout << "Min spp " << minSpp << endl;
+    cout << "Max spp " << maxSpp << endl;
+    cout << "Min beta " << minBeta << endl;
+    cout << "Max beta " << maxBeta << endl;
+  }
 
   int offset = 3;
+  float totalSpp = 0;
   tbb::parallel_for( tbb::blocked_range2d<int, int>(0, h, 0, w),[&](tbb::blocked_range2d<int, int> r) {
     for (int i = r.rows().begin(); i < r.rows().end(); ++i) {
       for (int j = r.cols().begin(); j < r.cols().end(); ++j) {
         Vec3f color;
+        totalSpp += aafParam.spp[i][j];
         if (sppHeatMap) {
           color = heatMap(aafParam.spp[i][j], minSpp, maxSpp);
           color = makeColor(color);
@@ -700,6 +712,7 @@ void Minimal::render(unsigned char* pixels) {
     }
   });
 
+  if  (LOG) cout << "Avg spp : " << totalSpp / (w * h) << endl;
 
 //  saveImageToFile(pixels, w, h);
 
