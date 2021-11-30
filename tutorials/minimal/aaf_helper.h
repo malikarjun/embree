@@ -40,8 +40,8 @@ public:
   AAFParam(){}
 
   AAFParam(int h, int w, Light light, Camera camera, vector<ObjMesh> &objects, int normalRpp, int bruteRpp,
-           int maxRppPass) :
-      height(h), width(w), pixelRadx(10), pixelRady(10),
+           int maxRppPass, int pr) :
+      height(h), width(w), pixelRadx(pr), pixelRady(pr),
       vis(h, vector<Vec3f>(w, Vec3f(0.f))), brdf(h, vector<Vec3f>(w, Vec3f(0.f))),
       worldLoc(h, vector<Vec3f>(w)), normal(h, vector<Vec3f>(w)),
       slope(h, vector<Vec2f>(w)), slopeFilter1d(h, vector<Vec2f>(w)),

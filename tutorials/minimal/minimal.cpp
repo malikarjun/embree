@@ -307,7 +307,7 @@ void initialSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
   float projDist = 2.f / aafParam.height * (rayhit.ray.tfar * tan(aafParam.camera.fovy/2));
   aafParam.projDist[x][y] = projDist;
   float wxf = aafParam.computeWxf(s2, pos);
-  aafParam.beta[x][y] = min(0.5f, 1/wxf);
+  aafParam.beta[x][y] = 1/wxf;
 
   aafParam.vis[x][y].x = 1;
   int theoreticalSpp = 0;
@@ -372,7 +372,7 @@ void slopeFilterY(Pos pos, AAFParam &aafParam) {
     curSlope = slopeMinMax(curSlope, useFilter, objId, x, y + i, false, aafParam);
   }
   if (!aafParam.useFilterOcc[x][y]) {
-    aafParam.useFilterOcc[x][y] = aafParam.useFilterOcc[x][y] | useFilter;
+    aafParam.useFilterOcc[x][y] = aafParam.useFilterOcc[x][y] || useFilter;
     aafParam.slope[x][y] = curSlope;
   }
 }
@@ -393,7 +393,7 @@ void adaptiveSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
   float wxf = aafParam.computeWxf(curSlope.y, pos);
   int targetSpp = aafParam.computeSpp(curSlope.x, curSlope.y, wxf, pos);
   aafParam.spp[x][y] = targetSpp;
-  aafParam.beta[x][y] = min(0.5f, 1/wxf);
+  aafParam.beta[x][y] = 1/wxf;
 
   int curSpp = (int) (aafParam.normalRpp * aafParam.normalRpp);
   if (curSpp < targetSpp) {
@@ -560,7 +560,7 @@ void Minimal::init(string scene) {
   Light light = readLightFile((BASE_PATH + "data/" + obj + "/light.txt").c_str());
 
   this->aafParam = AAFParam((int)camera.height, (int)camera.width, light, camera, objects, 7,
-                            20, 10);
+                            20, 10, 10);
 }
 
 void Minimal::destroy() {
@@ -682,7 +682,7 @@ void Minimal::render(unsigned char* pixels) {
           color = heatMap(aafParam.spp[i][j], minSpp, maxSpp);
           color = makeColor(color);
         } else if (betaHeatMap) {
-          if (aafParam.useFilterOcc[i][j]) {
+          if (aafParam.useFilterOcc[i][j] && aafParam.beta[i][j] < 10) {
             color = heatMap(aafParam.beta[i][j], minBeta, maxBeta);
           } else {
             color = Vec3f(0);
