@@ -263,6 +263,9 @@ void afterIntersection(RTCScene scene, RTCIntersectContext &context, RTCRayHit r
 
 
   float s1 = distToLight/d2min - 1, s2 = distToLight/d2max - 1;
+  if (d2max < 0) {
+    s2 = 10000;
+  }
   aafParam.slope[x][y].x = s1;
   aafParam.slope[x][y].y = s2;
 
@@ -304,7 +307,7 @@ void initialSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
   float projDist = 2.f / aafParam.height * (rayhit.ray.tfar * tan(aafParam.camera.fovy/2));
   aafParam.projDist[x][y] = projDist;
   float wxf = aafParam.computeWxf(s2, pos);
-  aafParam.beta[x][y] = max(0.f, 1/wxf);
+  aafParam.beta[x][y] = min(0.5f, 1/wxf);
 
   aafParam.vis[x][y].x = 1;
   int theoreticalSpp = 0;
@@ -390,7 +393,7 @@ void adaptiveSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
   float wxf = aafParam.computeWxf(curSlope.y, pos);
   int targetSpp = aafParam.computeSpp(curSlope.x, curSlope.y, wxf, pos);
   aafParam.spp[x][y] = targetSpp;
-  aafParam.beta[x][y] = max(0.f, 1/wxf);
+  aafParam.beta[x][y] = min(0.5f, 1/wxf);
 
   int curSpp = (int) (aafParam.normalRpp * aafParam.normalRpp);
   if (curSpp < targetSpp) {
@@ -567,6 +570,7 @@ void Minimal::destroy() {
 }
 
 
+bool capTime = false;
 
 void Minimal::render(unsigned char* pixels) {
   aafParam.reinit();
@@ -586,6 +590,7 @@ void Minimal::render(unsigned char* pixels) {
      }
     }
   });
+  if (capTime)
   cout << "time (ms) for 1st pass : " << (chrono::high_resolution_clock::now() - p1_start_time) / chrono::milliseconds(1)  << endl;
 
 
@@ -616,6 +621,7 @@ void Minimal::render(unsigned char* pixels) {
       }
     }
   });
+  if (capTime)
   cout << "time (ms) for beta/n compute : " << (chrono::high_resolution_clock::now() - bn_start_time) / chrono::milliseconds(1)  << endl;
 
 
@@ -636,6 +642,7 @@ void Minimal::render(unsigned char* pixels) {
         }
       }
     });
+    if (capTime)
     cout << "time (ms) for 2nd pass : " << (chrono::high_resolution_clock::now() - as_start_time) / chrono::milliseconds(1)  << endl;
 
   }
@@ -656,7 +663,7 @@ void Minimal::render(unsigned char* pixels) {
       }
     }
   });
-
+  if (capTime)
   cout << "time (ms) for adaptive filtering : " << (chrono::high_resolution_clock::now() - af_start_time) / chrono::milliseconds(1)  << endl;
 
 
@@ -675,7 +682,7 @@ void Minimal::render(unsigned char* pixels) {
           color = heatMap(aafParam.spp[i][j], minSpp, maxSpp);
           color = makeColor(color);
         } else if (betaHeatMap) {
-          if (aafParam.useFilterOcc[i][j] && aafParam.beta[i][j] > 0) {
+          if (aafParam.useFilterOcc[i][j]) {
             color = heatMap(aafParam.beta[i][j], minBeta, maxBeta);
           } else {
             color = Vec3f(0);

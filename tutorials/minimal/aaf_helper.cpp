@@ -53,9 +53,9 @@ int AAFParam::computeSpp( float s1, float s2, float wxf, Pos pos ) {
 
 float gaussFilter(float distsq, float wxf) {
   float sample = distsq*wxf*wxf;
-//  if (sample > 0.9999) {
-//    return 0.0;
-//  }
+  if (sample > 0.9999) {
+    return 0.0;
+  }
   return exp(-3*sample);
 }
 
