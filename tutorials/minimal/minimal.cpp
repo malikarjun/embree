@@ -628,7 +628,7 @@ void Minimal::render(unsigned char* pixels) {
   cout << "time (ms) for beta/n compute : " << (chrono::high_resolution_clock::now() - bn_start_time) / chrono::milliseconds(1)  << endl;
 
 
-  bool adapSampling = false;
+  bool adapSampling = true;
 
   if (adapSampling) {
     auto as_start_time = std::chrono::high_resolution_clock::now();
@@ -640,8 +640,10 @@ void Minimal::render(unsigned char* pixels) {
           minSpp = min(minSpp, aafParam.spp[i][j]);
           maxSpp = max(maxSpp, aafParam.spp[i][j]);
 
-          minBeta = min(minBeta, aafParam.beta[i][j]);
-          maxBeta = max(maxBeta, aafParam.beta[i][j]);
+          if (aafParam.useFilterOcc[i][j] && aafParam.beta[i][j] < 10) {
+            minBeta = min(minBeta, aafParam.beta[i][j]);
+            maxBeta = max(maxBeta, aafParam.beta[i][j]);
+          }
         }
       }
     });
@@ -650,7 +652,7 @@ void Minimal::render(unsigned char* pixels) {
     cout << "time (ms) for 2nd pass : " << (chrono::high_resolution_clock::now() - as_start_time) / chrono::milliseconds(1)  << endl;
 
   }
-  bool adapFiltering = false;
+  bool adapFiltering = true;
   auto af_start_time = std::chrono::high_resolution_clock::now();
 
   if (adapFiltering) {
@@ -718,7 +720,7 @@ void Minimal::render(unsigned char* pixels) {
 
   if  (LOG) cout << "Avg spp : " << totalSpp / totalPixels << endl;
 
-  saveImageToFile(pixels, w, h);
+//  saveImageToFile(pixels, w, h);
 
 }
 
