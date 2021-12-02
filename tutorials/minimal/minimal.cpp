@@ -628,7 +628,7 @@ void Minimal::render(unsigned char* pixels) {
   cout << "time (ms) for beta/n compute : " << (chrono::high_resolution_clock::now() - bn_start_time) / chrono::milliseconds(1)  << endl;
 
 
-  bool adapSampling = true;
+  bool adapSampling = false;
 
   if (adapSampling) {
     auto as_start_time = std::chrono::high_resolution_clock::now();
@@ -650,7 +650,7 @@ void Minimal::render(unsigned char* pixels) {
     cout << "time (ms) for 2nd pass : " << (chrono::high_resolution_clock::now() - as_start_time) / chrono::milliseconds(1)  << endl;
 
   }
-  bool adapFiltering = true;
+  bool adapFiltering = false;
   auto af_start_time = std::chrono::high_resolution_clock::now();
 
   if (adapFiltering) {
@@ -684,12 +684,16 @@ void Minimal::render(unsigned char* pixels) {
   }
 
   int offset = 3;
-  float totalSpp = 0;
+  float totalSpp = 0, totalPixels = 0;
   tbb::parallel_for( tbb::blocked_range2d<int, int>(0, h, 0, w),[&](tbb::blocked_range2d<int, int> r) {
     for (int i = r.rows().begin(); i < r.rows().end(); ++i) {
       for (int j = r.cols().begin(); j < r.cols().end(); ++j) {
         Vec3f color;
-        totalSpp += aafParam.spp[i][j];
+        if (aafParam.spp[i][j] > 0) {
+          totalSpp += aafParam.spp[i][j];
+          totalPixels++;
+        }
+
         if (sppHeatMap) {
           color = heatMap(aafParam.spp[i][j], minSpp, maxSpp);
           color = makeColor(color);
@@ -712,9 +716,9 @@ void Minimal::render(unsigned char* pixels) {
     }
   });
 
-  if  (LOG) cout << "Avg spp : " << totalSpp / (w * h) << endl;
+  if  (LOG) cout << "Avg spp : " << totalSpp / totalPixels << endl;
 
-//  saveImageToFile(pixels, w, h);
+  saveImageToFile(pixels, w, h);
 
 }
 
