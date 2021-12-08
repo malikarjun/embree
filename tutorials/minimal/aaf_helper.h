@@ -35,11 +35,11 @@ public:
   Light light;
   Camera camera;
   vector<ObjMesh> objects;
-  int normalRpp, bruteRpp, maxRppPass;
+  int normalRpp, maxRppPass;
 
   AAFParam(){}
 
-  AAFParam(int h, int w, Light light, Camera camera, vector<ObjMesh> &objects, int normalRpp, int bruteRpp,
+  AAFParam(int h, int w, Light light, Camera camera, vector<ObjMesh> &objects, int normalRpp,
            int maxRppPass, int pr) :
       height(h), width(w), pixelRadx(pr), pixelRady(pr),
       vis(h, vector<Vec3f>(w, Vec3f(0.f))), brdf(h, vector<Vec3f>(w, Vec3f(0.f))),
@@ -52,7 +52,7 @@ public:
       light(light),
       camera(camera),
       objects(objects),
-      normalRpp(normalRpp), bruteRpp(bruteRpp), maxRppPass(maxRppPass) {
+      normalRpp(normalRpp), maxRppPass(maxRppPass) {
   }
 
   void reinit();

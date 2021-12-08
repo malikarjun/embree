@@ -315,7 +315,7 @@ void initialSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
   if (aafParam.useFilterOcc[x][y]) {
     theoreticalSpp = aafParam.computeSpp(s1, s2, wxf, pos);
   }
-  aafParam.spp[x][y] += min(theoreticalSpp, aafParam.bruteRpp * aafParam.bruteRpp);
+  aafParam.spp[x][y] += min(theoreticalSpp, aafParam.maxRppPass * aafParam.maxRppPass);
 
   if (aafParam.useFilterOcc[x][y] && aafParam.vis[x][y].z > 0.01) {
     // y and z are updated in the afterIntersection fn
@@ -561,8 +561,9 @@ void Minimal::init(string scene) {
 
   Light light = readLightFile((BASE_PATH + "data/" + obj + "/light.txt").c_str());
 
-  this->aafParam = AAFParam((int)camera.height, (int)camera.width, light, camera, objects, 3,
-                            20, 10, 10);
+  int normalRpp = 3;
+  this->aafParam = AAFParam((int)camera.height, (int)camera.width, light, camera, objects, normalRpp,
+                            4*normalRpp, 3);
 }
 
 void Minimal::destroy() {
@@ -573,6 +574,7 @@ void Minimal::destroy() {
 
 
 bool LOG = false;
+bool enableAaf = true;
 
 void Minimal::render(unsigned char* pixels) {
   aafParam.reinit();
@@ -628,7 +630,7 @@ void Minimal::render(unsigned char* pixels) {
   cout << "time (ms) for beta/n compute : " << (chrono::high_resolution_clock::now() - bn_start_time) / chrono::milliseconds(1)  << endl;
 
 
-  bool adapSampling = true;
+  bool adapSampling = enableAaf;
 
   if (adapSampling) {
     auto as_start_time = std::chrono::high_resolution_clock::now();
@@ -652,7 +654,7 @@ void Minimal::render(unsigned char* pixels) {
     cout << "time (ms) for 2nd pass : " << (chrono::high_resolution_clock::now() - as_start_time) / chrono::milliseconds(1)  << endl;
 
   }
-  bool adapFiltering = true;
+  bool adapFiltering = enableAaf;
   auto af_start_time = std::chrono::high_resolution_clock::now();
 
   if (adapFiltering) {
@@ -718,9 +720,9 @@ void Minimal::render(unsigned char* pixels) {
     }
   });
 
-  if  (LOG) cout << "Avg spp : " << totalSpp / totalPixels << endl;
+  if (LOG) cout << "Avg spp : " << totalSpp / totalPixels << endl;
 
-//  saveImageToFile(pixels, w, h);
+  if (LOG) saveImageToFile(pixels, w, h);
 
 }
 
