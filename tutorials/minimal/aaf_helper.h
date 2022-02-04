@@ -8,7 +8,7 @@
 
 #include "helper.h"
 
-using namespace std;
+using  std::vector;
 
 class Pos {
 public:

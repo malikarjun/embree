@@ -12,7 +12,8 @@
 
 std::string BASE_PATH = "../tutorials/minimal/";
 
-using namespace std;
+using std::string;
+using std::vector;
 
 // for string delimiter
 vector<string> split (string s, string delimiter) {
@@ -34,7 +35,7 @@ Vec3f vectToVec3f(vector<float> vect) {
   return Vec3f(vect[0], vect[1], vect[2]);
 }
 
-vector<float> readValues(stringstream &s)
+vector<float> readValues(std::stringstream &s)
 {
   vector<float> values;
   string val;
@@ -48,7 +49,7 @@ vector<float> readValues(stringstream &s)
 
 vector<Material> readMaterialFile(const char * filename) {
   vector<Material> materials;
-  ifstream in;
+  std::ifstream in;
   in.open(filename);
   if (in.is_open()) {
 
@@ -61,7 +62,7 @@ vector<Material> readMaterialFile(const char * filename) {
         getline (in, str);
         continue;
       }
-      stringstream s(str);
+      std::stringstream s(str);
       s >> cmd;
       if (cmd == "newmtl") {
         string name;
@@ -88,7 +89,7 @@ ObjMesh readObjFile (const char * filename, const char * matfilename) {
   // material.mtl
   vector<Material> materials = readMaterialFile(matfilename);
 
-  ifstream in;
+  std::ifstream in;
   in.open(filename);
   // TODO : throw exception if file not found!!
   if (in.is_open()) {
@@ -100,7 +101,7 @@ ObjMesh readObjFile (const char * filename, const char * matfilename) {
         getline (in, str);
         continue;
       }
-      stringstream s(str);
+	  std::stringstream s(str);
       s >> cmd;
       if (cmd == "v") {
         objMesh.vertex.push_back(vectToVec3f(readValues(s)));
@@ -121,7 +122,7 @@ ObjMesh readObjFile (const char * filename, const char * matfilename) {
 
 Camera readCameraFile (const char * filename) {
   Camera camera;
-  ifstream in;
+  std::ifstream in;
   in.open(filename);
   if (in.is_open()) {
 
@@ -132,7 +133,7 @@ Camera readCameraFile (const char * filename) {
         getline (in, str);
         continue;
       }
-      stringstream s(str);
+      std::stringstream s(str);
       s >> cmd;
       if (cmd == "eye" ) {
         camera.eye = vectToVec3f(readValues(s));
@@ -155,7 +156,7 @@ Camera readCameraFile (const char * filename) {
 
 Light readLightFile (const char * filename) {
   Light light;
-  ifstream in;
+  std::ifstream in;
   in.open(filename);
   if (in.is_open()) {
 
@@ -166,7 +167,7 @@ Light readLightFile (const char * filename) {
         getline (in, str);
         continue;
       }
-      stringstream s(str);
+      std::stringstream s(str);
       s >> cmd;
       if (cmd == "a" ) {
         light.origin = vectToVec3f(readValues(s));

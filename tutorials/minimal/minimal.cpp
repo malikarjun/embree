@@ -182,8 +182,8 @@ void afterIntersection(RTCScene scene, RTCIntersectContext &context, RTCRayHit r
         if (shadowRayHit.hit.geomID != RTC_INVALID_GEOMETRY_ID || shadowRayHit.ray.tfar < d1) {
           aafParam.useFilterOcc[x][y] = true;
           float dprime = shadowRayHit.ray.tfar;
-          d2min = min(d2min, d1 - dprime);
-          d2max = max(d2max, d1 - dprime);
+          d2min = fmin(d2min, d1 - dprime);
+          d2max = fmax(d2max, d1 - dprime);
           if (dprime < 0.000000001) {
             d2min = d1;
           }
@@ -224,8 +224,8 @@ void afterIntersection(RTCScene scene, RTCIntersectContext &context, RTCRayHit r
     if (shadowRayHitNp->hit.geomID[i] != RTC_INVALID_GEOMETRY_ID || shadowRayHitNp->ray.tfar[i] < d1) {
       aafParam.useFilterOcc[x][y] = true;
       float dprime = shadowRayHitNp->ray.tfar[i];
-      d2min = min(d2min, d1 - dprime);
-      d2max = max(d2max, d1 - dprime);
+      d2min = fmin(d2min, d1 - dprime);
+      d2max = fmax(d2max, d1 - dprime);
       if (dprime < 0.000000001) {
         d2min = d1;
       }
@@ -250,8 +250,8 @@ void afterIntersection(RTCScene scene, RTCIntersectContext &context, RTCRayHit r
       if (shadowRayHit.hit.geomID != RTC_INVALID_GEOMETRY_ID || shadowRayHit.ray.tfar < d1) {
         aafParam.useFilterOcc[x][y] = true;
         float dprime = shadowRayHit.ray.tfar;
-        d2min = min(d2min, d1 - dprime);
-        d2max = max(d2max, d1 - dprime);
+        d2min = fmin(d2min, d1 - dprime);
+        d2max = fmax(d2max, d1 - dprime);
         if (dprime < 0.000000001) {
           d2min = d1;
         }
@@ -288,10 +288,6 @@ void initialSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
   RTCRayHit rayhit = createRayHit(getOrigin(rtcRay), getDir(rtcRay));
   rtcIntersect1(scene, &context, &rayhit);
 
-  if (debug(x, y)) {
-    float f = aafParam.computeWxf(0, pos);
-  }
-
   if (rayhit.hit.geomID == RTC_INVALID_GEOMETRY_ID) {
     // if no surface was hit
     aafParam.vis[x][y] = Vec3f(1, 1, 0);
@@ -315,7 +311,7 @@ void initialSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
   if (aafParam.useFilterOcc[x][y]) {
     theoreticalSpp = aafParam.computeSpp(s1, s2, wxf, pos);
   }
-  aafParam.spp[x][y] += min(theoreticalSpp, aafParam.maxRppPass * aafParam.maxRppPass);
+  aafParam.spp[x][y] += fmin(theoreticalSpp, aafParam.maxRppPass * aafParam.maxRppPass);
 
   if (aafParam.useFilterOcc[x][y] && aafParam.vis[x][y].z > 0.01) {
     // y and z are updated in the afterIntersection fn
@@ -323,7 +319,7 @@ void initialSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
   }
 }
 
-Vec2f slopeMinMax(Vec2f& curSlope, bool& useFilt, int objId, int i, int j, bool firstPass, AAFParam &aafParam) {
+Vec2f slopeMinfmax(Vec2f& curSlope, bool& useFilt, int objId, int i, int j, bool firstPass, AAFParam &aafParam) {
   Vec2f output_slope = curSlope;
   bool useFilter = false;
   if (i >= 0 && i < aafParam.height && j >= 0 && j < aafParam.width) {
@@ -341,8 +337,8 @@ Vec2f slopeMinMax(Vec2f& curSlope, bool& useFilt, int objId, int i, int j, bool 
       useFilter = aafParam.useFilterOcc1d[i][j];
     }
     if (useFilter) {
-      output_slope.x = max(curSlope.x, target_slope.x);
-      output_slope.y = min(curSlope.y, target_slope.y);
+      output_slope.x = fmax(curSlope.x, target_slope.x);
+      output_slope.y = fmin(curSlope.y, target_slope.y);
     }
   }
   useFilt = useFilt || useFilter;
@@ -356,7 +352,7 @@ void slopeFilterX(Pos pos, AAFParam &aafParam) {
   bool useFilter = aafParam.useFilterOcc[x][y];
   int objId = aafParam.objId[x][y];
   for (int i = -aafParam.pixelRadx; i < aafParam.pixelRadx; i++) {
-    curSlope = slopeMinMax(curSlope, useFilter, objId, x + i, y, true, aafParam);
+    curSlope = slopeMinfmax(curSlope, useFilter, objId, x + i, y, true, aafParam);
   }
   aafParam.useFilterOcc1d[x][y] = aafParam.useFilterOcc1d[x][y] || useFilter;
   aafParam.slopeFilter1d[x][y] = curSlope;
@@ -369,7 +365,7 @@ void slopeFilterY(Pos pos, AAFParam &aafParam) {
   bool useFilter = aafParam.useFilterOcc1d[x][y];
   int objId = aafParam.objId[x][y];
   for (int i = -aafParam.pixelRady; i < aafParam.pixelRady; i++) {
-    curSlope = slopeMinMax(curSlope, useFilter, objId, x, y + i, false, aafParam);
+    curSlope = slopeMinfmax(curSlope, useFilter, objId, x, y + i, false, aafParam);
   }
   if (!aafParam.useFilterOcc[x][y]) {
     aafParam.useFilterOcc[x][y] = aafParam.useFilterOcc[x][y] || useFilter;
@@ -391,13 +387,9 @@ void adaptiveSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
   aafParam.spp[x][y] = targetSpp;
   aafParam.beta[x][y] = 1/wxf;
 
-  if (debug(x, y)) {
-    float f = aafParam.computeWxf(0, pos);
-  }
-
   int curSpp = (int) (aafParam.normalRpp * aafParam.normalRpp);
   if (curSpp < targetSpp) {
-    targetSpp = min(targetSpp, aafParam.maxRppPass * aafParam.maxRppPass);
+    targetSpp = fmin(targetSpp, aafParam.maxRppPass * aafParam.maxRppPass);
     aafParam.spp[x][y] = targetSpp - curSpp;
 
     struct RTCIntersectContext context;
@@ -416,7 +408,7 @@ void adaptiveSampling(RTCScene scene, Pos pos, AAFParam &aafParam) {
       aafParam.vis[x][y].x = aafParam.vis[x][y].y / aafParam.vis[x][y].z;
     }
   }
-  aafParam.spp[x][y] = max(targetSpp, curSpp);
+  aafParam.spp[x][y] = fmax(targetSpp, curSpp);
 }
 
 void occlFilter(float& blurredVisSum, float& sumWeight, Vec3f& curWorldLoc, Vec3f curN,
@@ -520,7 +512,7 @@ void saveImageToFile(unsigned char* pixels, int w, int h, string fileName = "ima
 
   for (int i = 0; i < h; ++i) {
     for (int j = 0; j < w; ++j) {
-      swap(image[i * (w * 3) + j * 3 + 0], image[i * (w * 3) + j * 3 + 2]);
+      std::swap(image[i * (w * 3) + j * 3 + 0], image[i * (w * 3) + j * 3 + 2]);
     }
   }
 
@@ -580,10 +572,10 @@ void Minimal::render(unsigned char* pixels) {
   aafParam.reinit();
   int h = aafParam.height, w = aafParam.width;
 
-//  cout << "camera eye" <<  aafParam.camera.eye.to_string() << endl;
-//  cout << "camera u" <<  aafParam.camera.u.to_string() << endl;
-//  cout << "camera v" <<  aafParam.camera.v.to_string() << endl;
-//  cout << "camera w" <<  aafParam.camera.w.to_string() << endl << endl;
+//  std::cout << "camera eye" <<  aafParam.camera.eye.to_string() << std::endl;
+//  std::cout << "camera u" <<  aafParam.camera.u.to_string() << std::endl;
+//  std::cout << "camera v" <<  aafParam.camera.v.to_string() << std::endl;
+//  std::cout << "camera w" <<  aafParam.camera.w.to_string() << std::endl << std::endl;
 
   auto p1_start_time = std::chrono::high_resolution_clock::now();
   tbb::parallel_for( tbb::blocked_range2d<int, int>(0, h, 0, w),
@@ -595,7 +587,7 @@ void Minimal::render(unsigned char* pixels) {
     }
   });
   if (LOG)
-  cout << "time (ms) for 1st pass : " << (chrono::high_resolution_clock::now() - p1_start_time) / chrono::milliseconds(1)  << endl;
+  std::cout << "time (ms) for 1st pass : " << (std::chrono::high_resolution_clock::now() - p1_start_time) / std::chrono::milliseconds(1)  << std::endl;
 
 //  saveSpp(aafParam, "spp_beforeAS");
 
@@ -607,8 +599,8 @@ void Minimal::render(unsigned char* pixels) {
 
   auto bn_start_time = std::chrono::high_resolution_clock::now();
   aafParam.firstPass = false;
-  int minSpp = numeric_limits<int>::infinity(), maxSpp = -1;
-  float minBeta = numeric_limits<float>::infinity(), maxBeta = -numeric_limits<float>::infinity();
+  int minSpp = std::numeric_limits<int>::infinity(), maxSpp = -1;
+  float minBeta = std::numeric_limits<float>::infinity(), maxBeta = -std::numeric_limits<float>::infinity();
 
   tbb::parallel_for( tbb::blocked_range2d<int, int>(0, h, 0, w),
                      [&](tbb::blocked_range2d<int, int> r) {
@@ -627,7 +619,7 @@ void Minimal::render(unsigned char* pixels) {
     }
   });
   if (LOG)
-  cout << "time (ms) for beta/n compute : " << (chrono::high_resolution_clock::now() - bn_start_time) / chrono::milliseconds(1)  << endl;
+  std::cout << "time (ms) for beta/n compute : " << (std::chrono::high_resolution_clock::now() - bn_start_time) / std::chrono::milliseconds(1)  << std::endl;
 
 
   bool adapSampling = enableAaf;
@@ -639,19 +631,19 @@ void Minimal::render(unsigned char* pixels) {
       for (int i = r.rows().begin(); i < r.rows().end(); ++i) {
         for (int j = r.cols().begin(); j < r.cols().end(); ++j) {
           adaptiveSampling(this->scene, Pos(i, j), aafParam);
-          minSpp = min(minSpp, aafParam.spp[i][j]);
-          maxSpp = max(maxSpp, aafParam.spp[i][j]);
+          minSpp = fmin(minSpp, aafParam.spp[i][j]);
+          maxSpp = fmax(maxSpp, aafParam.spp[i][j]);
 
           if (aafParam.useFilterOcc[i][j] && aafParam.beta[i][j] < 10) {
-            minBeta = min(minBeta, aafParam.beta[i][j]);
-            maxBeta = max(maxBeta, aafParam.beta[i][j]);
+            minBeta = fmin(minBeta, aafParam.beta[i][j]);
+            maxBeta = fmax(maxBeta, aafParam.beta[i][j]);
           }
         }
       }
     });
 //    saveSpp(aafParam, "spp_afterAS");
     if (LOG)
-    cout << "time (ms) for 2nd pass : " << (chrono::high_resolution_clock::now() - as_start_time) / chrono::milliseconds(1)  << endl;
+    std::cout << "time (ms) for 2nd pass : " << (std::chrono::high_resolution_clock::now() - as_start_time) / std::chrono::milliseconds(1)  << std::endl;
 
   }
   bool adapFiltering = enableAaf;
@@ -676,15 +668,15 @@ void Minimal::render(unsigned char* pixels) {
   }
 
   if (LOG)
-  cout << "time (ms) for adaptive filtering : " << (chrono::high_resolution_clock::now() - af_start_time) / chrono::milliseconds(1)  << endl;
+  std::cout << "time (ms) for adaptive filtering : " << (std::chrono::high_resolution_clock::now() - af_start_time) / std::chrono::milliseconds(1)  << std::endl;
 
 
   bool sppHeatMap = false, betaHeatMap = false;
   if (LOG) {
-    cout << "Min spp " << minSpp << endl;
-    cout << "Max spp " << maxSpp << endl;
-    cout << "Min beta " << minBeta << endl;
-    cout << "Max beta " << maxBeta << endl;
+    std::cout << "Min spp " << minSpp << std::endl;
+    std::cout << "Max spp " << maxSpp << std::endl;
+    std::cout << "Min beta " << minBeta << std::endl;
+    std::cout << "Max beta " << maxBeta << std::endl;
   }
 
   int offset = 3;
@@ -720,7 +712,7 @@ void Minimal::render(unsigned char* pixels) {
     }
   });
 
-  if (LOG) cout << "Avg spp : " << totalSpp / totalPixels << endl;
+  if (LOG) std::cout << "Avg spp : " << totalSpp / totalPixels << std::endl;
 
   if (LOG) saveImageToFile(pixels, w, h);
 

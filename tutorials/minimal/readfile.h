@@ -11,7 +11,8 @@
 
 extern std::string BASE_PATH;
 
-using namespace std;
+using std::string;
+using std::vector;
 
 vector<Material> readMaterialFile(const char * filename);
 

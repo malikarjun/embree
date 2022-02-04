@@ -8,13 +8,13 @@
 #include <chrono>
 
 #include "minimal.h"
+// camera angle is given in degrees
+vector<float> camAngle, ltPos;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
   glViewport(0, 0, width, height);
 }
-// camera angle is given in degrees
-vector<float> camAngle, ltPos;
 bool camMov = false, ltMovX = false, ltMovY = false;
 
 void initMovementParams() {
@@ -49,22 +49,22 @@ void processInput(GLFWwindow *window, unsigned char* pixels, AAFParam& aafParam)
     aafParam.camera.eye.y -= 1;
   } else if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
     camMov = true;
-    cout << "pressed c" << endl;
+    std::cout << "pressed c" << std::endl;
   }  else if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS) {
     camMov = false;
-    cout << "pressed v" << endl;
+    std::cout << "pressed v" << std::endl;
   } else if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) {
     ltMovX = true;
-    cout << "pressed x" << endl;
+    std::cout << "pressed x" << std::endl;
   } else if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS) {
     ltMovX = false;
-    cout << "pressed z" << endl;
+    std::cout << "pressed z" << std::endl;
   } else if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS) {
     ltMovY = true;
-    cout << "pressed y" << endl;
+    std::cout << "pressed y" << std::endl;
   } else if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) {
     ltMovY = false;
-    cout << "pressed t" << endl;
+    std::cout << "pressed t" << std::endl;
   }
   aafParam.camera.setUpCameraCoordFrame();
 }
@@ -134,11 +134,11 @@ int main(int argc, char** argv)
     glDrawPixels(w, h, GL_RGB, GL_UNSIGNED_BYTE, pixels);
 
     glfwSwapBuffers(window);
-    auto end_time = chrono::high_resolution_clock::now();
+    auto end_time = std::chrono::high_resolution_clock::now();
     auto time = end_time - start_time;
-    float tt = (time / chrono::milliseconds(1))/1000.f;
-//    cout << "time : " << tt  << endl;
-    cout << "fps : " <<  1/tt << endl;
+    float tt = (time / std::chrono::milliseconds(1))/1000.f;
+//    std::cout << "time : " << tt  << std::endl;
+    std::cout << "fps : " <<  1/tt << std::endl;
     glfwPollEvents();
   }
 
